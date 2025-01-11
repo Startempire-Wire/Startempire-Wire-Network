@@ -39,15 +39,18 @@
     "activeTab",
     "identity",
     "webRequest",
-    "notifications"
+    "notifications",
+    "webNavigation"
   ],
-  "host_permissions": ["https://*/*"],
+  "host_permissions": ["https://*/*", "<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "oauth2": {
     "client_id": "${WORDPRESS_CLIENT_ID}",
     "scopes": [
+      "profile",
+      "network_access",
       "https://startempirewire.com/wp-json/",
       "https://startempirewire.network/wp-json/"
     ]

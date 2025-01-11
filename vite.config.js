@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'path';
 import { writeFileSync, mkdirSync } from 'fs';
+import path from 'path'
 
 export default defineConfig({
   plugins: [
@@ -73,7 +74,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src')
+      '$lib': path.resolve(__dirname, './src/lib')
     }
   }
 }); 

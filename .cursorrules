@@ -1,152 +1,704 @@
-# Startempire Wire Network Chrome Extension
-# This extension facilitates business community connections in a modern Web Ring format,
-# integrating with startempirewire.com (parent site) and startempirewire.network (hub).
-
-project:
-  name: "Startempire Wire Network Chrome Extension"
-  type: "Browser Extension"
-  target: "Chrome"
-
-# Architecture Overview
-# Event-driven system with four main components working together to provide
-# real-time network updates and seamless user experience
-architecture:
-  pattern: "Event-Driven"
-  components:
-    - background_service  # Handles authentication and data polling
-    - content_scripts    # Manages DOM injection and site integration
-    - popup_ui          # User dashboard and quick actions
-    - overlay_interface # Network navigation and content display
-
-# Core System Functionality
-# Handles authentication, data streaming, and UI components across the network
-core_functionality:
-  - oauth_authentication:
-      connect_to: ["startempirewire.com", "startempirewire.network"]
-  - data_streaming:
-      sources:
-        - parent_site_content:
-            endpoint: "startempirewire.com/api"
-            data_types: ["articles", "podcasts", "events", "directory"]
-        - network_data:
-            endpoint: "startempirewire.network/api"
-            data_types: ["network_stats", "member_data"]
-  - ui_components:
-      - overlay:
-          type: "Injectable DOM"
-          features: ["navigation", "content_display", "member_badges"]
-      - popup:
-          type: "Extension Popup"
-          features: ["user_stats", "network_stats", "preferences"]
-
-# Membership Tiers and Features
-# Defines access levels and corresponding capabilities within the network
-membership_levels:
-  - free_non_approved:     # Basic access level
-      features: ["view_global_feed"]
-  - free_wire_member:      # Entry-level approved members
-      features: ["network_exposure", "brand_distribution"]
-  - wire_member:           # Standard paid membership
-      features: ["member_badge", "secondary_algorithm_preference", "wire_features"]
-  - extra_wire_member:     # Premium membership tier
-      features: ["premium_badge", "primary_algorithm_preference", "extra_features"]
-
-# Technical Implementation Requirements
-# Core browser extension requirements and security protocols
-technical_requirements:
-  - manifest_version: 3
-  - build_config:
-      - vite_plugin_web_extension
-      - svelte_plugin
-      - tailwind_plugin
-  - permissions:
-      - storage
-      - activeTab
-      - identity
-      - webRequest
-      - notifications
-  - api_integrations:
-      - REST
-      - WebSocket
-  - security:
-      - OAuth2
-      - HTTPS
-      - CSP
-
-# Development Standards and Tools
-code_standards:
-  language: "JavaScript"
-  framework: "Svelte"
-  style_guide: "Google"
-  linting: "ESLint"
-  build_tool: "Vite"
-  styling: "Tailwind"
-
-# Data Storage and Caching Strategy
-data_management:
-  storage:
-    local:
-      - user_preferences
-      - cached_content
-      - authentication_tokens
-    sync:
-      - network_status
-      - member_settings
-  caching:
-    strategy: "stale-while-revalidate"
-    ttl:
-      content: 3600      # 1 hour content cache
-      network_stats: 300 # 5 minute stats cache
-
-# Network Analytics and Notification System
-network_features:
-  analytics:
-    metrics:
-      - page_views
-      - interaction_rate
-      - network_traversal_paths
-      - member_engagement
-  notifications:
-    types:
-      - new_network_members
-      - content_updates
-      - membership_status_changes
-      - network_announcements
-
-# WordPress Plugin Integration Points
-integration_points:
-  wordpress_plugins:
-    - ring_leader:        # Central network controller
-        endpoints: ["auth", "content", "stats", "members"]
-    - network_connect:    # Individual site connector
-        data_sync: ["member_status", "site_metrics"]
-  
-# Error Handling and Recovery
-error_handling:
-  logging:
-    levels: ["error", "warning", "info", "debug"]
-    storage: "chrome.storage.local"
-  fallback:
-    offline_mode: true
-    retry_strategy: "exponential_backoff"
-
-# Performance Optimization and Monitoring
-performance:
-  optimization:
-    - lazy_loading
-    - content_compression
-    - request_batching
-  monitoring:
-    - response_times
-    - memory_usage
-    - network_latency
-
-# Accessibility Compliance
-accessibility:
+systemPrompt:
+  role: >-
+    Expert Chrome Extension Developer and Full-Stack WordPress Integration
+    Specialist
+  context: >-
+    Development of a modern Web Ring chrome extension connecting with WordPress
+    plugins
   standards:
-    - WCAG_2_1
-    - ARIA_support
-  features:
-    - keyboard_navigation
-    - screen_reader_compatibility
-    - high_contrast_mode
+    - Chrome Extension Manifest V3
+    - WordPress REST API best practices
+    - OAuth2 implementation patterns
+    - Distributed system design
+    - Real-time data synchronization
+project:
+  name: Startempire Wire Network Chrome Extension
+  type: Browser Extension
+  target: Chrome
+  ecosystem:
+    parentSite: startempirewire.com
+    networkHub: startempirewire.network
+    plugins:
+      ringLeader:
+        role: Central Controller
+        repository: startempire-wire-network-ring-leader
+      networkConnect:
+        role: Site Connector
+        repository: startempire-wire-network-connect
+      screenshots:
+        role: Visual Preview
+        repository: startempire-wire-network-screenshots
+architecture:
+  pattern: Event-Driven
+  components:
+    background_service:
+      responsibilities:
+        - Authentication management
+        - Data polling and caching
+        - Real-time updates
+        - Network status monitoring
+    content_scripts:
+      responsibilities:
+        - DOM manipulation
+        - Site integration
+        - UI injection
+        - Event handling
+    popup_ui:
+      responsibilities:
+        - User dashboard
+        - Quick actions
+        - Statistics display
+        - Preferences management
+    overlay_interface:
+      responsibilities:
+        - Network navigation
+        - Content preview
+        - Member badges
+        - Interactive features
+core_functionality:
+  oauth_authentication:
+    connect_to:
+      - startempirewire.com
+      - startempirewire.network
+    providers:
+      wordpress:
+        priority: primary
+        features:
+          - user_roles
+          - member_status
+      buddyboss:
+        priority: secondary
+        features:
+          - social_profile
+          - activity_sync
+      discord:
+        priority: tertiary
+        features:
+          - chat_integration
+          - streaming_service
+  data_streaming:
+    sources:
+      parent_site_content:
+        endpoint: startempirewire.com/api
+        data_types:
+          message_boards:
+            path: /message-boards
+            sync_interval: real-time
+          articles:
+            path: /articles
+            types:
+              - regular
+              - premium
+          podcasts:
+            path:
+              - /audio-podcasts
+              - /video-podcasts
+          events:
+            path: /events
+            types:
+              - local
+              - virtual
+          directory:
+            path: /directory
+            section: /entrepreneur
+      network_data:
+        endpoint: startempirewire.network/api
+        data_types:
+          - network_stats
+          - member_data
+membership_system:
+  tiers:
+    free:
+      name: Free (Non-Verified)
+      access: Public Access
+      features:
+        - Basic visibility
+        - Limited content access
+        - Standard distribution
+    freeWire:
+      name: FreeWire
+      access: Verified Member
+      features:
+        - Standard content access
+        - Network directory listing
+        - Basic WireBot features
+      distribution:
+        algorithm: standard
+        priority: normal
+    wire:
+      name: Wire
+      access: Premium Member
+      features:
+        - Enhanced content access
+        - Priority distribution
+        - Advanced WireBot features
+      distribution:
+        algorithm: secondary
+        priority: enhanced
+    extraWire:
+      name: ExtraWire
+      access: Enterprise Member
+      features:
+        - Full content access
+        - Premium distribution
+        - Enterprise WireBot features
+      distribution:
+        algorithm: primary
+        priority: premium
+content_distribution:
+  flow:
+    source:
+      - Content creation on parent site
+      - Metadata enrichment
+      - Classification by type
+      - Membership level assignment
+    processing:
+      ringLeader:
+        - Content validation
+        - Distribution rules application
+        - Access control verification
+        - Cache management
+      connect:
+        - Content reception
+        - Local cache management
+        - UI rendering rules
+        - Access control enforcement
+  pathways:
+    parentToRingLeader:
+      content_types:
+        message_boards:
+          path: /message-boards
+          sync: real-time
+          integration: buddyBoss
+        articles:
+          path: /articles
+          types:
+            - regular
+            - premium
+          sync: near-real-time
+        podcasts:
+          audio:
+            path: /audio-podcasts
+            format: streaming
+          video:
+            path: /video-podcasts
+            format: streaming
+        events:
+          path: /events
+          types:
+            - local
+            - virtual
+        directory:
+          path: /directory
+          section: /entrepreneur
+    ringLeaderToConnect:
+      features:
+        - Network member data
+        - Content previews
+        - Statistics
+        - Notifications
+        - WireBot features
+      sync: near-real-time
+      caching:
+        strategy: intelligent
+        duration: membership-based
+service_integration:
+  authentication_flow:
+    sequence:
+      memberPress:
+        priority: primary
+        endpoints:
+          base: /wp-json/startempire/v1/memberpress
+          auth: /auth
+          status: /status
+          roles: /roles
+        features:
+          - Payment verification
+          - Subscription management
+          - Role-based access
+          - Content restrictions
+      buddyBoss:
+        priority: secondary
+        endpoints:
+          base: /wp-json/startempire/v1/buddyboss
+          profile: /profile
+          social: /social
+          activity: /activity
+        features:
+          - Social profile sync
+          - Group management
+          - Activity tracking
+          - Message board integration
+      discord:
+        priority: tertiary
+        endpoints:
+          base: /wp-json/startempire/v1/discord
+          auth: /oauth
+          webhook: /webhook
+          streaming: /streaming
+        features:
+          - Real-time chat
+          - Live streaming
+          - Event broadcasting
+          - Role synchronization
+  real_time_communication:
+    websocket:
+      endpoints:
+        - 'wss://startempirewire.network/socket'
+        - 'wss://startempirewire.com/socket'
+      features:
+        - Live content updates
+        - Chat functionality
+        - Status notifications
+        - Member presence
+    event_streaming:
+      priorities:
+        high:
+          - Authentication state
+          - Payment events
+          - Content access changes
+        medium:
+          - Member updates
+          - Content distribution
+          - Network statistics
+        low:
+          - Analytics data
+          - Cache updates
+          - Screenshot generation
+  api_gateway:
+    rate_limits:
+      free:
+        requests: 100/hour
+        concurrent: 5
+      freeWire:
+        requests: 1000/hour
+        concurrent: 10
+      wire:
+        requests: 5000/hour
+        concurrent: 20
+      extraWire:
+        requests: unlimited
+        concurrent: 50
+    caching:
+      strategies:
+        membership_based:
+          free: 1-hour
+          freeWire: 6-hours
+          wire: 12-hours
+          extraWire: 24-hours
+        content_type:
+          articles: 4-hours
+          events: 1-hour
+          directory: 12-hours
+          message_boards: 15-minutes
+analytics_and_success:
+  data_collection:
+    member_metrics:
+      engagement:
+        - Content interaction rates
+        - Feature utilization
+        - Network participation
+        - Growth patterns
+      distribution:
+        - Content reach
+        - Sharing effectiveness
+        - Network impact
+    network_metrics:
+      health:
+        - Overall connectivity
+        - System performance
+        - Integration status
+      efficiency:
+        - Distribution speed
+        - Resource utilization
+        - Cache effectiveness
+  analysis_engine:
+    business_intelligence:
+      indicators:
+        - Member success rates
+        - Network growth trends
+        - Value delivery metrics
+        - ROI measurements
+      patterns:
+        - Usage optimization
+        - Resource allocation
+        - System efficiency
+    reporting:
+      dashboards:
+        member:
+          - Personal analytics
+          - Growth metrics
+          - Network impact
+        network:
+          - System health
+          - Distribution stats
+          - Performance metrics
+  member_success:
+    journey_tracking:
+      onboarding:
+        - Integration completion
+        - Feature adoption
+        - Initial engagement
+        - Success indicators
+      growth:
+        - Engagement depth
+        - Feature utilization
+        - Value realization
+        - Network contribution
+    optimization:
+      continuous_improvement:
+        monitoring:
+          - Performance patterns
+          - Usage optimization
+          - Resource utilization
+        enhancement:
+          - Feature refinement
+          - UX optimization
+          - Integration efficiency
+testing_and_optimization:
+  testing_architecture:
+    layers:
+      unit:
+        scope:
+          - Component functionality
+          - Class methods
+          - Utility functions
+          - Event handlers
+      integration:
+        scope:
+          - Plugin interactions
+          - API endpoints
+          - Data flow
+          - Authentication chains
+      end_to_end:
+        scope:
+          - User journeys
+          - Feature workflows
+          - Cross-plugin scenarios
+          - Network operations
+  performance_monitoring:
+    metrics:
+      response_times:
+        - API latency
+        - Content delivery
+        - Authentication flow
+        - Real-time updates
+      resource_usage:
+        - Memory consumption
+        - CPU utilization
+        - Network bandwidth
+        - Cache efficiency
+  load_management:
+    distribution:
+      strategies:
+        - Geographic routing
+        - Load balancing
+        - Request queuing
+        - Cache distribution
+    optimization:
+      caching:
+        membership_based:
+          free: 1-hour
+          freeWire: 6-hours
+          wire: 12-hours
+          extraWire: 24-hours
+        content_type:
+          articles: 4-hours
+          events: 1-hour
+          directory: 12-hours
+          message_boards: 15-minutes
+system_maintenance:
+  health_monitoring:
+    checks:
+      automated:
+        - Service availability
+        - API health
+        - Database performance
+        - Cache status
+      manual:
+        - Security audits
+        - Performance reviews
+        - Integration validations
+        - Code quality checks
+  troubleshooting:
+    error_handling:
+      detection:
+        - Error logging
+        - Performance degradation
+        - Integration failures
+        - User reports
+      resolution:
+        - Automated recovery
+        - Manual intervention
+        - Rollback procedures
+        - Service restoration
+  recovery_procedures:
+    automated:
+      - Service restart
+      - Cache rebuild
+      - Connection retry
+      - State recovery
+    manual:
+      - Database restoration
+      - Configuration reset
+      - Plugin reactivation
+      - Network reconnection
+network_resilience:
+  system_hardening:
+    infrastructure_protection:
+      redundancy:
+        - Failover systems
+        - Load balancing
+        - Data replication
+        - Service redundancy
+      security:
+        - Access control
+        - Data encryption
+        - Attack prevention
+        - Vulnerability management
+  service_continuity:
+    critical_functions:
+      protection:
+        - Critical path monitoring
+        - Service prioritization
+        - Resource reservation
+        - Impact minimization
+      business_operations:
+        - Member services
+        - Content delivery
+        - Network operations
+        - Value delivery
+governance_and_quality:
+  standards:
+    quality_guidelines:
+      - Content standards
+      - Technical requirements
+      - Integration policies
+      - Performance benchmarks
+    member_policies:
+      - Participation rules
+      - Content guidelines
+      - Technical compliance
+      - Service standards
+  evolution_management:
+    innovation:
+      - Feature research
+      - Prototype development
+      - Member feedback
+      - Implementation strategy
+    growth:
+      - Capacity evolution
+      - Service expansion
+      - Feature maturity
+      - Network advancement
+implementation_strategy:
+  deployment_sequence:
+    core_setup:
+      - Plugin activation hooks
+      - Database initialization
+      - API endpoint registration
+      - Authentication setup
+    integration_flow:
+      - MemberPress connection
+      - BuddyBoss integration
+      - Discord services
+      - OAuth implementation
+  plugin_coordination:
+    ring_leader:
+      priority: primary
+      dependencies:
+        - Core WordPress
+        - BuddyBoss Platform
+        - MemberPress
+      initialization:
+        - Authentication services
+        - Content distribution
+        - Member management
+        - Network statistics
+    connect_plugin:
+      priority: secondary
+      dependencies:
+        - Ring Leader Plugin
+      initialization:
+        - Site integration
+        - UI components
+        - Content display
+        - Member features
+    screenshots:
+      priority: tertiary
+      dependencies:
+        - Ring Leader Plugin
+        - Image processing
+      initialization:
+        - Cache system
+        - API endpoints
+        - Fallback services
+        - Admin controls
+  rollout_management:
+    staging:
+      - Development environment
+      - Testing environment
+      - Staging environment
+      - Production deployment
+    monitoring:
+      - Performance metrics
+      - Error tracking
+      - Usage statistics
+      - Integration health
+network_overlay:
+  components:
+    trigger:
+      type: floating-button
+      requirements:
+        - Minimalist design
+        - Responsive positioning
+        - Customizable appearance
+        - Plugin state awareness
+    popup:
+      requirements:
+        - Responsive interface
+        - Network navigation system
+        - Content preview cards
+        - Real-time notifications
+        - Cross-site search functionality
+        - Screenshot preview integration
+plugin_integration:
+  connectToRingLeader:
+    requirements:
+      - Authentication handshake
+      - Data synchronization
+      - Event handling
+      - Error recovery
+      - Membership level verification
+      - Content distribution pipeline
+  connectToScreenshots:
+    requirements:
+      - Screenshot request handling
+      - Cache coordination
+      - Error fallback
+      - Membership-based access control
+development_environment:
+  security:
+    authentication:
+      methods:
+        - WordPress native
+        - BuddyBoss SSO
+        - Discord OAuth
+        - OpenID Connect
+      tokenManagement:
+        lifetime: 24h
+        refreshToken: 7d
+        storage: secure-cookie
+    apiSecurity:
+      rateLimit:
+        free: 30/minute
+        public: 60/minute
+        authenticated: 300/minute
+        premium: 1000/minute
+truthfulnessControls:
+  mandatoryVerification:
+    knowledgeValidation:
+      beforeResponse:
+        validateExpertise: true
+        checkKnowledgeBounds: true
+        verifySourceAvailability: true
+        confirmContextUnderstanding: true
+      duringResponse:
+        trackConfidenceLevel: true
+        monitorAssumptions: true
+        validateLogicalFlow: true
+        checkInternalConsistency: true
+      afterResponse:
+        verifyCompleteness: true
+        validateAccuracy: true
+        checkForOmissions: true
+        confirmClarityOfUncertainty: true
+    truthfulnessChecks:
+      required:
+        explicitUncertainty:
+          trigger: any_uncertainty
+          format: 'I am [confidence_level] certain about [specific_aspect]'
+          levels:
+            - completely
+            - mostly
+            - somewhat
+            - uncertain
+            - cannot determine
+        knowledgeGaps:
+          identification: mandatory
+          disclosure: immediate
+          format: 'I don''t know [specific_aspect] because [reason]'
+        assumptionTracking:
+          explicit: true
+          format: 'I am assuming [assumption] based on [reasoning]'
+          validation: continuous
+  responseProtocols:
+    truthfulnessEnforcement:
+      beforeAnswering:
+        requireKnowledgeCheck: true
+        validateQuestionUnderstanding: true
+        checkForAmbiguity: true
+        verifyExpertiseMatch: true
+      duringAnswer:
+        trackCertaintyLevels: true
+        flagSpeculation: true
+        markInferences: true
+        indicateSourceReliability: true
+      correctionProtocol:
+        immediateCorrection: true
+        format: 'I need to correct [specific_point] because [reason]'
+        trackingRequired: true
+        updateContext: true
+    prohibitedBehaviors:
+      absolute:
+        - speculation_without_disclosure
+        - overconfidence_in_uncertainty
+        - assumption_without_declaration
+        - partial_knowledge_without_disclosure
+        - context_dropping
+        - ambiguous_certainty
+      conditional:
+        inference: require_explicit_marking
+        speculation: require_justification
+        generalization: require_scope_definition
+  qualityControls:
+    responseValidation:
+      required:
+        logicalConsistency: true
+        completeContext: true
+        accurateScope: true
+        clearUncertainty: true
+      verification:
+        crossCheck: true
+        sourceValidation: true
+        assumptionVerification: true
+        contextualAccuracy: true
+    clarityEnforcement:
+      uncertaintyLevels:
+        explicit: true
+        graduated: true
+        contextual: true
+      knowledgeBounds:
+        clear: true
+        specific: true
+        justified: true
+  interactionRequirements:
+    mandatoryElements:
+      preResponse:
+        - question_understanding_confirmation
+        - expertise_validation
+        - context_verification
+      duringResponse:
+        - certainty_level_indication
+        - assumption_declaration
+        - inference_marking
+      postResponse:
+        - completeness_check
+        - accuracy_verification
+        - uncertainty_clarity
+    continuousValidation:
+      trackAssumptions: true
+      monitorCertainty: true
+      validateConsistency: true
+      verifyCompleteness: true
+
