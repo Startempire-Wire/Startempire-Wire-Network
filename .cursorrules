@@ -103,6 +103,7 @@ core_functionality:
           - streaming_service
           - role_synchronization
           - guild_management
+        scopes: ["guilds.members.read"]
       openid_connect:
         priority: quaternary
         features:

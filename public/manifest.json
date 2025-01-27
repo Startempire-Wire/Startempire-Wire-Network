@@ -41,8 +41,7 @@
     "webRequest",
     "notifications",
     "webNavigation",
-    "discord.voice",
-    "discord.guilds"
+    "discord.voice.channel"
   ],
   "host_permissions": ["https://*/*", "<all_urls>", "https://discord.com/api/*"],
   "content_security_policy": {
@@ -59,7 +58,8 @@
       "guilds",
       "guilds.members.read",
       "discord:guilds",
-      "discord:guilds.join"
+      "discord:guilds.join",
+      "discord:guilds.members.read"
     ]
   }
 }
