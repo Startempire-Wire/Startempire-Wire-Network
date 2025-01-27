@@ -1,4 +1,4 @@
-import { auth } from '$lib/components/services/auth';
+import { auth } from '$lib/services';
 
 // API endpoint configuration
 const SCREENSHOT_API_BASE = 'https://startempirewire.network/wp-json/sewn/v1';
@@ -29,7 +29,7 @@ const SCREENSHOT_API = 'https://startempirewire.network/wp-json/sewn/v1/screensh
  */
 export async function getWebsiteScreenshot(url, previewOnly = false) {
   const logPrefix = `${LOG_PREFIX}[getWebsiteScreenshot]`;
-  
+
   try {
     // Check cache first
     const isCached = await isScreenshotCached(url);
@@ -81,7 +81,7 @@ async function cacheScreenshot(url, screenshotUrl) {
   try {
     const cache = await chrome.storage.local.get('screenshots') || {};
     const screenshots = cache.screenshots || {};
-    
+
     screenshots[url] = {
       data: screenshotUrl,
       timestamp: Date.now()
@@ -100,7 +100,7 @@ async function cacheScreenshot(url, screenshotUrl) {
  */
 export async function clearScreenshotCache() {
   const logPrefix = `${LOG_PREFIX}[clearScreenshotCache]`;
-  
+
   try {
     console.log(`${logPrefix} Clearing screenshot cache`);
     await chrome.storage.local.remove('screenshots');
@@ -123,7 +123,7 @@ export async function isScreenshotCached(url) {
   try {
     const cache = await chrome.storage.local.get('screenshots');
     const cacheEntry = cache?.screenshots?.[url];
-    
+
     if (!cacheEntry) {
       console.debug(`${logPrefix} No cache entry found`);
       return false;
@@ -131,11 +131,25 @@ export async function isScreenshotCached(url) {
 
     const age = Date.now() - cacheEntry.timestamp;
     const isValid = age < CACHE_TTL;
-    
+
     console.debug(`${logPrefix} Cache entry ${isValid ? 'valid' : 'expired'} (age: ${age}ms)`);
     return isValid;
   } catch (error) {
     console.error(`${logPrefix} Cache check failed:`, error);
     return false;
   }
+}
+
+export async function fetchScreenshot(url, tier) {
+  const quality = {
+    free: '1280x720',
+    extraWire: '2560x1440'
+  }[tier];
+
+  const response = await fetch(
+    `https://startempirewire.network/wp-json/screenshots/v1/capture?url=${url}&quality=${quality}`
+  );
+
+  if (!response.ok) throw new Error('Screenshot capture failed');
+  return response.blob();
 } 

@@ -2,10 +2,14 @@
   import '../../styles/app.css';
   import Tabs from '$lib/components/navigation/Tabs.svelte';
   import { onMount } from 'svelte';
-  import { authStore } from '$lib/components/services/auth.js';
+  import { authStore } from '$lib/services';
+  import { getNetworkStats } from '$lib/services/network';
 
-  onMount(() => {
+  let stats = [];
+
+  onMount(async () => {
     console.log('Sidepanel mounted');
+    stats = await getNetworkStats();
   });
 </script>
 
@@ -17,4 +21,13 @@
   </header>
 
   <Tabs />
-</div> 
+
+  <dl class="grid grid-cols-3 gap-4">
+    {#each stats as stat}
+      <div class="border p-4">
+        <dt class="text-sm">{stat.label}</dt>
+        <dd class="text-2xl font-bold">{stat.value}</dd>
+      </div>
+    {/each}
+  </dl>
+</div>

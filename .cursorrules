@@ -1,10 +1,6 @@
 systemPrompt:
-  role: >-
-    Expert Chrome Extension Developer and Full-Stack WordPress Integration
-    Specialist
-  context: >-
-    Development of a modern Web Ring chrome extension connecting with WordPress
-    plugins
+  role: Expert Chrome Extension Developer and Full-Stack WordPress Integration Specialist
+  context: Development of a modern Web Ring chrome extension connecting with WordPress plugins
   standards:
     - Chrome Extension Manifest V3
     - WordPress REST API best practices
@@ -43,18 +39,40 @@ architecture:
         - Site integration
         - UI injection
         - Event handling
-    popup_ui:
+    chrome_extension_popup_ui:
       responsibilities:
         - User dashboard
         - Quick actions
         - Statistics display
         - Preferences management
-    overlay_interface:
+    chrome_extension_side_panel:
       responsibilities:
-        - Network navigation
-        - Content preview
+        - Startempire Wire Network Navigation
+        - Content preview & content distribution
         - Member badges
         - Interactive features
+        - WireBot Integration
+        - Network Settings
+        - Discord Live Streaming & Chat Integration
+        - Network Status & Statistics
+    chrome_extension_new_tab_page:
+      responsibilities:
+        - Widgetized Startempire Wire Network Dashboard
+        - Startempire Wire Network Navigation
+        - Content preview & content distribution
+        - Member badges
+        - Interactive features
+        - WireBot Integration
+        - Network Settings
+        - Discord Live Streaming & Chat Integration
+        - Network Status & Statistics
+    network_overlay_interface:
+      responsibilities:
+        - Startempire Wire Network Navigation (Web Ring Nav)
+        - Content preview & content distribution (Web Ring Content)
+        - Member badges
+        - Interactive features
+        - Discord Live Streaming & Chat Integration
 core_functionality:
   oauth_authentication:
     connect_to:
@@ -66,6 +84,13 @@ core_functionality:
         features:
           - user_roles
           - member_status
+      memberPress:
+        priority: integrated
+        features:
+          - payment_verification
+          - subscription_sync
+          - role_mapping
+          - content_restrictions
       buddyboss:
         priority: secondary
         features:
@@ -76,6 +101,12 @@ core_functionality:
         features:
           - chat_integration
           - streaming_service
+          - role_synchronization
+          - guild_management
+      openid_connect:
+        priority: quaternary
+        features:
+          - authentication_flow
   data_streaming:
     sources:
       parent_site_content:
@@ -205,8 +236,15 @@ content_distribution:
 service_integration:
   authentication_flow:
     sequence:
-      memberPress:
+      wordPressNative:
         priority: primary
+        endpoints:
+          base: /wp-json/startempire/v1
+          auth: /auth
+          status: /status
+          roles: /roles
+      memberPress:
+        priority: secondary
         endpoints:
           base: /wp-json/startempire/v1/memberpress
           auth: /auth
@@ -218,7 +256,7 @@ service_integration:
           - Role-based access
           - Content restrictions
       buddyBoss:
-        priority: secondary
+        priority: tertiary
         endpoints:
           base: /wp-json/startempire/v1/buddyboss
           profile: /profile
@@ -230,7 +268,7 @@ service_integration:
           - Activity tracking
           - Message board integration
       discord:
-        priority: tertiary
+        priority: quaternary
         endpoints:
           base: /wp-json/startempire/v1/discord
           auth: /oauth
@@ -238,14 +276,15 @@ service_integration:
           streaming: /streaming
         features:
           - Real-time chat
-          - Live streaming
+          - Live streaming integration
           - Event broadcasting
           - Role synchronization
   real_time_communication:
     websocket:
+      handler: background_service
       endpoints:
-        - 'wss://startempirewire.network/socket'
-        - 'wss://startempirewire.com/socket'
+        - wss://startempirewire.network/socket
+        - wss://startempirewire.com/socket
       features:
         - Live content updates
         - Chat functionality
@@ -358,6 +397,15 @@ analytics_and_success:
 testing_and_optimization:
   testing_architecture:
     layers:
+      cross_browser:
+        tools:
+          - web-ext
+          - vitest
+        scope:
+          - Chrome
+          - Firefox
+          - Edge
+          - Safari
       unit:
         scope:
           - Component functionality
@@ -577,6 +625,13 @@ plugin_integration:
       - Cache coordination
       - Error fallback
       - Membership-based access control
+      - Fallback service integration
+      - Quality adaptation
+      - Cache invalidation strategies
+    content_type:
+      - Standard: 1280x720 JPEG
+      - Premium: 1920x1080 WebP
+      - Enterprise: 2560x1440 WebP
 development_environment:
   security:
     authentication:
@@ -617,7 +672,7 @@ truthfulnessControls:
       required:
         explicitUncertainty:
           trigger: any_uncertainty
-          format: 'I am [confidence_level] certain about [specific_aspect]'
+          format: I am [confidence_level] certain about [specific_aspect]
           levels:
             - completely
             - mostly
@@ -627,10 +682,10 @@ truthfulnessControls:
         knowledgeGaps:
           identification: mandatory
           disclosure: immediate
-          format: 'I don''t know [specific_aspect] because [reason]'
+          format: I don't know [specific_aspect] because [reason]
         assumptionTracking:
           explicit: true
-          format: 'I am assuming [assumption] based on [reasoning]'
+          format: I am assuming [assumption] based on [reasoning]
           validation: continuous
   responseProtocols:
     truthfulnessEnforcement:
@@ -646,7 +701,7 @@ truthfulnessControls:
         indicateSourceReliability: true
       correctionProtocol:
         immediateCorrection: true
-        format: 'I need to correct [specific_point] because [reason]'
+        format: I need to correct [specific_point] because [reason]
         trackingRequired: true
         updateContext: true
     prohibitedBehaviors:
@@ -701,4 +756,318 @@ truthfulnessControls:
       monitorCertainty: true
       validateConsistency: true
       verifyCompleteness: true
+technical_requirements:
+  project_structure:
+    root_path: /Volumes/Macintosh HD/Users/vsmith/Documents/ChromeExtensionDev/startempire-wire-network
+    metadata:
+      project_type: chrome-extension
+      framework:
+        name: svelte
+        build_tool: vite
+    file_categories:
+      config:
+        - path: .env
+        - path: .prettierrc
+        - path: jsconfig.json
+        - path: postcss.config.cjs
+        - path: svelte.config.js
+        - path: tailwind.config.js
+        - path: vite.config.js
+      build:
+        - path: package-lock.json
+        - path: package.json
+      documentation:
+        path: docs
+        contents:
+          directories: {}
+          files:
+            - name: bigpicture.mdx
+              path: docs/bigpicture.mdx
+              extension: .mdx
+            - name: wirebot_chat_gpt_brainstorm.mdx
+              path: docs/wirebot_chat_gpt_brainstorm.mdx
+              extension: .mdx
+        files:
+          - name: README.md
+            path: README.md
+            extension: .md
+    directories:
+      public:
+        path: public
+        contents:
+          directories:
+            icons:
+              path: public/icons
+              contents:
+                directories: {}
+                files:
+                  - name: icon_128.png
+                    path: public/icons/icon_128.png
+                    extension: .png
+                  - name: icon_16.png
+                    path: public/icons/icon_16.png
+                    extension: .png
+                  - name: icon_32.png
+                    path: public/icons/icon_32.png
+                    extension: .png
+                  - name: icon_48.png
+                    path: public/icons/icon_48.png
+                    extension: .png
+          files:
+            - name: manifest.json
+              path: public/manifest.json
+              extension: .json
+            - name: sidepanel.html
+              path: public/sidepanel.html
+              extension: .html
+            - name: startempire-wire-network.html
+              path: public/startempire-wire-network.html
+              extension: .html
+      scripts:
+        path: scripts
+        contents:
+          directories: {}
+          files:
+            - name: process-html.js
+              path: scripts/process-html.js
+              extension: .js
+            - name: structure-generator.js
+              path: scripts/structure-generator.js
+              extension: .js
+            - name: watch-structure.js
+              path: scripts/watch-structure.js
+              extension: .js
+      src:
+        path: src
+        contents:
+          directories:
+            lib:
+              path: src/lib
+              contents:
+                directories:
+                  components:
+                    path: src/lib/components
+                    contents:
+                      directories:
+                        navigation:
+                          path: src/lib/components/navigation
+                          contents:
+                            directories: {}
+                            files:
+                              - name: Tabs.svelte
+                                path: src/lib/components/navigation/Tabs.svelte
+                                extension: .svelte
+                        popup:
+                          path: src/lib/components/popup
+                          contents:
+                            directories: {}
+                            files:
+                              - name: popup.svelte
+                                path: src/lib/components/popup/popup.svelte
+                                extension: .svelte
+                        services:
+                          path: src/lib/components/services
+                          contents:
+                            directories: {}
+                            files:
+                              - name: auth.js
+                                path: src/lib/components/services/auth.js
+                                extension: .js
+                        sidepanel:
+                          path: src/lib/components/sidepanel
+                          contents:
+                            directories: {}
+                            files:
+                              - name: sidepanel.svelte
+                                path: src/lib/components/sidepanel/sidepanel.svelte
+                                extension: .svelte
+                        ui:
+                          path: src/lib/components/ui
+                          contents:
+                            directories:
+                              tabs:
+                                path: src/lib/components/ui/tabs
+                                contents:
+                                  directories: {}
+                                  files:
+                                    - name: index.js
+                                      path: src/lib/components/ui/tabs/index.js
+                                      extension: .js
+                                    - name: tabs-content.svelte
+                                      path: src/lib/components/ui/tabs/tabs-content.svelte
+                                      extension: .svelte
+                                    - name: tabs-list.svelte
+                                      path: src/lib/components/ui/tabs/tabs-list.svelte
+                                      extension: .svelte
+                                    - name: tabs-trigger.svelte
+                                      path: src/lib/components/ui/tabs/tabs-trigger.svelte
+                                      extension: .svelte
+                            files: []
+                      files: []
+                  services:
+                    path: src/lib/services
+                    contents:
+                      directories: {}
+                      files:
+                        - name: screenshot.js
+                          path: src/lib/services/screenshot.js
+                          extension: .js
+                files:
+                  - name: utils.js
+                    path: src/lib/utils.js
+                    extension: .js
+            pages:
+              path: src/pages
+              contents:
+                directories:
+                  options:
+                    path: src/pages/options
+                    contents:
+                      directories: {}
+                      files:
+                        - name: Options.svelte
+                          path: src/pages/options/Options.svelte
+                          extension: .svelte
+                        - name: options.js
+                          path: src/pages/options/options.js
+                          extension: .js
+                  popup:
+                    path: src/pages/popup
+                    contents:
+                      directories: {}
+                      files:
+                        - name: Popup.svelte
+                          path: src/pages/popup/Popup.svelte
+                          extension: .svelte
+                        - name: popup.js
+                          path: src/pages/popup/popup.js
+                          extension: .js
+                  sidepanel:
+                    path: src/pages/sidepanel
+                    contents:
+                      directories: {}
+                      files:
+                        - name: Sidepanel.svelte
+                          path: src/pages/sidepanel/Sidepanel.svelte
+                          extension: .svelte
+                        - name: sidepanel.js
+                          path: src/pages/sidepanel/sidepanel.js
+                          extension: .js
+                files: []
+            services:
+              path: src/services
+              contents:
+                directories: {}
+                files:
+                  - name: auth.js
+                    path: src/services/auth.js
+                    extension: .js
+            styles:
+              path: src/styles
+              contents:
+                directories: {}
+                files:
+                  - name: app.css
+                    path: src/styles/app.css
+                    extension: .css
+          files:
+            - name: app.css
+              path: src/app.css
+              extension: .css
+            - name: app.html
+              path: src/app.html
+              extension: .html
+            - name: background.js
+              path: src/background.js
+              extension: .js
+            - name: contentScript.js
+              path: src/contentScript.js
+              extension: .js
+    entry_points:
+      background: src/background.js
+      content: src/contentScript.js
+      popup: src/pages/popup/popup.js
+      sidepanel: src/pages/sidepanel/sidepanel.js
+    files:
+      - name: .cursorrules
+        path: .cursorrules
+        extension: ''
+      - name: .editorconfig
+        path: .editorconfig
+        extension: ''
+      - name: .prettierignore
+        path: .prettierignore
+        extension: ''
+      - name: .sewn-cursurrules
+        path: .sewn-cursurrules
+        extension: ''
+      - name: components.json
+        path: components.json
+        extension: .json
+      - name: cursorrules-BAK
+        path: cursorrules-BAK
+        extension: ''
+      - name: cursorrules-BAK2
+        path: cursorrules-BAK2
+        extension: ''
+      - name: new.tree
+        path: new.tree
+        extension: .tree
+      - name: startempire-wire-network.code-workspace
+        path: startempire-wire-network.code-workspace
+        extension: .code-workspace
 
+ui_directives:
+  description: >
+    This section outlines the preferred UI libraries and guidelines for their use in the project. The goal is to ensure consistency and leverage the strengths of each library.
+
+  libraries:
+    - name: ShadCN-svelte
+      url: https://shadcn-svelte.com/docs
+      priority: 1
+      usage: >
+        ShadCN-svelte is the primary UI library for this project. It should be used for all new components and UI elements where applicable. Its integration with Svelte provides a seamless development experience and ensures consistency across the UI.
+
+    - name: Tailwind CSS
+      url: https://tailwindcss.com/docs/installation/framework-guides/sveltekit
+      priority: 2
+      usage: >
+        Tailwind CSS is the primary CSS framework for this project. It should be used for all new components and UI elements where applicable. Its integration with Svelte provides a seamless development experience and ensures consistency across the UI.
+
+    - name: Lucide Svelte
+      url: https://lucide.dev/guide/packages/lucide-svelte
+      priority: 2
+      usage: >
+        Lucide Svelte is the primary icon library for this project. It should be used for all new components and UI elements where applicable. Its integration with Svelte provides a seamless development experience and ensures consistency across the UI.
+
+    - name: Melt UI
+      url: https://www.melt-ui.com/docs/introduction
+      priority: 2
+      usage: >
+        Melt UI can be used for specific components that require its unique features. It is suitable for complex UI interactions and should be considered when ShadCN-svelte does not meet the requirements.
+
+    - name: Skeleton UI
+      url: https://www.skeleton.dev/docs/get-started
+      priority: 3
+      usage: >
+        Skeleton UI is ideal for prototyping and quickly building out UI elements. It can be used in the early stages of development or for components that require rapid iteration.
+
+  guidelines:
+    - Ensure that ShadCN-svelte is the first choice for new UI components.
+    - Evaluate the specific needs of a component to determine if Melt UI or Skeleton UI is more appropriate.
+    - Maintain consistency in styling and interactions across the UI by adhering to the chosen library's conventions.
+    - Document any deviations from these guidelines and the rationale behind them.
+
+accessibility:
+  standards: WCAG 2.1 AA
+  requirements:
+    - keyboard_navigation
+    - aria_labels
+    - color_contrast
+    - screen_reader_support
+
+compliance:
+  regulations:
+    - GDPR
+    - CCPA
+    - COPPA

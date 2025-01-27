@@ -6,6 +6,17 @@ const AUTH_ENDPOINTS = {
   validate: 'https://startempirewire.com/wp-json/startempire-wire-network/v1/auth/validate'
 };
 
+// Add guilds scope for server verification
+const discordScopes = [
+  'identify',
+  'guilds',
+  'guilds.members.read'
+];
+
+// Constants
+const NETWORK_API = 'https://startempirewire.network/wp-json/sewn/v1';
+const PARENT_API = 'https://startempirewire.com/wp-json/sewn/v1';
+
 /**
  * Global authentication store
  * Manages reactive auth state across the extension
@@ -15,14 +26,11 @@ export const authStore = writable({
   isAuthenticated: false,
   user: null,
   membershipLevel: null,
-  wpAuthToken: null
+  wpAuthToken: null,
+  membershipFeatures: []
 });
 
-/**
- * Authentication service
- * Handles user authentication and token management
- */
-export const auth = {
+export class AuthService {
   /**
    * Initialize auth state from storage
    * Called on extension startup
@@ -30,7 +38,7 @@ export const auth = {
   async initialize() {
     const logPrefix = `${LOG_PREFIX}[initialize]`;
     console.log(`${logPrefix} Initializing auth service`);
-    
+
     try {
       const stored = await chrome.storage.local.get(['auth']);
       if (stored.auth) {
@@ -47,7 +55,7 @@ export const auth = {
       console.error(`${logPrefix} Failed to initialize:`, error);
       throw error;
     }
-  },
+  }
 
   /**
    * Authenticate user with WordPress OAuth
@@ -60,11 +68,11 @@ export const auth = {
     try {
       // Get WordPress OAuth token
       console.debug(`${logPrefix} Requesting OAuth token`);
-      const token = await chrome.identity.getAuthToken({ 
+      const token = await chrome.identity.getAuthToken({
         interactive: true,
         scopes: ['https://startempirewire.com/wp-json/']
       });
-      
+
       console.debug(`${logPrefix} Token received, validating with WordPress`);
       // Validate with WordPress
       const response = await fetch(AUTH_ENDPOINTS.validate, {
@@ -83,7 +91,7 @@ export const auth = {
         userId: userData.user?.id,
         membershipLevel: userData.membership_level
       });
-      
+
       // Store auth data
       const authData = {
         isAuthenticated: true,
@@ -104,7 +112,7 @@ export const auth = {
       console.error(`${logPrefix} Error stack:`, error.stack);
       throw error;
     }
-  },
+  }
 
   /**
    * Clear authentication state
@@ -117,7 +125,7 @@ export const auth = {
     try {
       console.debug(`${logPrefix} Clearing stored auth data`);
       await chrome.storage.local.remove(['auth']);
-      
+
       console.debug(`${logPrefix} Resetting auth store`);
       authStore.set({
         isAuthenticated: false,
@@ -133,4 +141,16 @@ export const auth = {
       throw error;
     }
   }
-}; 
+
+  async verifyMembership(token) {
+    const response = await fetch('https://startempirewire.com/wp-json/memberpress/v1/membership', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!response.ok) throw new Error('Invalid membership');
+    return response.json().tier; // Returns 'freeWire', 'wire', etc
+  }
+}
+
+// Create and export singleton instance
+export const auth = new AuthService(); 

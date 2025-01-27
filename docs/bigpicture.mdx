@@ -1,31 +1,34 @@
 THE FULL SOFTWARE ECOSYTEM CONTEXT:  This document is subject to continuous refinement.  The actual core of the hub will be the website https://startempirewire.com but I have purchased the domain name https://startempirewire.network as the core marketing site and place to allow downloads of the Startempire Wire Network Connect Plugin & the Startempire Wire Network Chrome Extension (Modern Web Ring). So the ecosystem we are developing looks something like this in a rough (incomplete outline):
 
 Website #1 - Startempire Wire (Parent Membership Website) [ https://startempirewire.com ]
-- Buddyboss Powered Parent Website
+- MemberPress (Primary Auth / Integrated With WordPress Auth) & Buddyboss Powered Parent Website
 - Uses MemberPress + WordPress User Roles to Handle Startempire Wire Membership Levels (Role Based: Free (Non-Verified - Public Access), FreeWire, Wire, ExtraWire), Access to Website Content & Payments Processing
 - Houses Canonical User Level/Role Based Premium Content that will be distributed to the Ring Leader Plugin then to the UI of Startempire Wire Network Connect Plugin & The Startempire Wire Network Chrome Extension. 
-- Content Includes:
--- Network Member Level (Role Based: Free (Non-Verified - Public Access), FreeWire, Wire, ExtraWire)
--- Network Member Data (Name, Email, Website, Logo, Description, etc)
+- Content & Data To be served via WordPress REST API to Ring Leader Plugin Includes:
+-- Network Member User Levels (Role Based: Free (Non-Verified - Public Access), FreeWire, Wire, ExtraWire)
+-- Network Member User Data (Name, Email, Website, Logo, Description, Membership Level, etc...)
 -- Message Boards (/message-boards)
 -- Regular & Premium Articles (/articles)
 -- Original Startempire Wire Podcasts (/audio-podcasts & /video-podcasts)
 -- Local & Virtual Event Calendar (/events)
 -- Startempire Wire Member (/entrepreneur) Directory (/directory)
 
-Website #2- Startempire Wire Network Website [ https://startempirewire.network ]
+Website #2 - Startempire Wire Network Website [ https://startempirewire.network ]
 - Handles the distribution & downloads of Startempire Wire Network software
 -- Startempire Wire Network Connect Plugin / or Component (for JS frameworks)
 -- Chrome Extension - Startempire Wire Network Chrome Extension
 - Houses the Documentation, Instruction & How-To of Startempire Wire Network Software
 - Handles Promotion & Marketing of the Startempire Wire Network
-- Handles distribution of data between different parts of the network via the Startempire Wire Network Ring Leader Plugin
+- Startempire Wire Network Screenshots Plugin Installed here to serve as a Screenshots Service to the Startempire Wire Network Connect Plugin & Startempire Wire Network Chrome Extension
+- Startempire Wire Network Ring Leader Plugin Installed here to serve as the messenger of The Parent Membership Website of The Network & Creates End Points For the Data Distribution to the Startempire Wire Network Connect Plugin & Startempire Wire Network Chrome Extension
+- Handles distribution of data retrieved from the Startempire Wire Website [https://startempirewire.com] via WordPress REST API between different parts of the network via the Startempire Wire Network Ring Leader Plugin
 
 WordPress Plugin #1 - Startempire Wire Network Ring Leader Plugin (Modern Web Ring)
 - CODE: https://github.com/Startempire-Wire/Startempire-Wire-Network-Ring-Leader.git
 - Singularly Unique Plugin that acts as the messenger of The Parent Membership Website of The Network & Creates A Modern Web Ring [ https://startempirewire.com ]
 - Installed on the Startempire Wire Network Website [ https://startempirewire.network ]
-- Handles Authentication (via WordPress User Authentication, BuddyPress / BuddyBoss User Authentication, Discord Authentication, OAuth & OpenID Connect) & data distribution between:  
+- Retrieves ALL Data from the Startempire Wire Website [https://startempirewire.com] via WordPress REST API Endpoints. 
+- Handles Authentication (via WordPress User Authentication (Primary Authentication), BuddyPress / BuddyBoss User Authentication, Discord Authentication, OAuth & OpenID Connect) & data distribution between:  
 --- Startempire Wire Website [https://startempirewire.com] => the Startempire Wire Network Ring Leader Plugin, 
 --- Startempire Wire Network [https://startempirewire.network] => the Startempire Wire Network Ring Leader Plugin,
 --- the Startempire Wire Network Ring Leader Plugin => the Startempire Network Connect Connect Plugin (Plugin #2) [ Located on Multiple Network Members Sites ], 
@@ -37,8 +40,8 @@ WordPress Plugin #1 - Startempire Wire Network Ring Leader Plugin (Modern Web Ri
 -- Ability to Moderate new Member Registrations
 -- Sends Notification Emails of Member Status (Pending, Approved, Rejected)
 -- Accepts New Member Registrations
-- Creates API Endpoints For Data Distribution To Connect to Startempire Network Connect Plugin
-- Creates API Endpoints For Data Distribution To Connect to Startempire Network Chrome Extension
+- Creates new API Endpoints For Data Distribution To Connect to Startempire Network Connect Plugin
+- Creates new API Endpoints For Data Distribution To Connect to Startempire Network Chrome Extension
 
 WordPress Plugin #2 - Startempire Wire Network Connect Plugin / or Component (for JS frameworks)
 - CODE: https://github.com/Startempire-Wire/Startempire-Wire-Network-Connect.git
@@ -70,11 +73,11 @@ Additional Service Details:
     - No authentication required
   * Direct API Consumers (paid service)
     - Standard/Premium tiers
-    - API key authentication
+    - API key authentication from Screenshots Plugin
     - Tier-based limits and quality
   * Network Members (via Ring Leader)
     - FreeWire/Wire/ExtraWire tiers
-    - Token-based authentication
+    - WordPress Token-based authentication
     - Membership-based quality
   * Admin Access
     - Full service control
@@ -104,7 +107,7 @@ Chrome Extension - Startempire Wire Network Chrome Extension
 - Connects to Startempire Wire Network Ring Leader Plugin and reads + displays data relevant to the user's membership level (Free (Non-Verified - Public Access), FreeWire, Wire, ExtraWire)
 - Streams User specific data or promotional content from StartempireWire Parent Site
 - Streams User specific data or promotional content from Startempire Wire Network
-- Integration of Discord Live Streaming & Chat
+- Integration of Discord Live Streaming & Chat (Possibly Separate Tab integrated via Discord.js)
 - Displays User Level (Free (Non-Verified - Public Access), FreeWire, Wire, ExtraWire) Specific Content to Overlay UI Created in Browser tab for users to Navigate (Popup Overlay)
 - Display Network & User Statistics & Trends
 - - Network Statistics: New Sites In Network

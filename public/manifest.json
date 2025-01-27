@@ -40,9 +40,11 @@
     "identity",
     "webRequest",
     "notifications",
-    "webNavigation"
+    "webNavigation",
+    "discord.voice",
+    "discord.guilds"
   ],
-  "host_permissions": ["https://*/*", "<all_urls>"],
+  "host_permissions": ["https://*/*", "<all_urls>", "https://discord.com/api/*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
@@ -51,8 +53,13 @@
     "scopes": [
       "profile",
       "network_access",
-      "https://startempirewire.com/wp-json/",
-      "https://startempirewire.network/wp-json/"
+      "https://startempirewire.com/*",
+      "https://startempirewire.network/*",
+      "https://discord.com/api/oauth2",
+      "guilds",
+      "guilds.members.read",
+      "discord:guilds",
+      "discord:guilds.join"
     ]
   }
 }

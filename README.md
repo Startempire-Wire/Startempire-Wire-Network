@@ -8,6 +8,7 @@
 - Connected Resources
 - Startup Advisor
 - Startempire Wire concierge
+- UI/UX Built with Shadcn/UI, TailwindCSS & Lucide Svelte Icons
 
 ## Install
 
