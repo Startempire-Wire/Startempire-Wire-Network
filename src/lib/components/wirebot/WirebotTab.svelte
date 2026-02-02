@@ -9,6 +9,7 @@
   import { onMount } from 'svelte';
   import { authStore } from '../../../services/auth';
   import wirebotApi from '$lib/services/wirebot-api';
+  import ProfileSummary from './ProfileSummary.svelte';
 
   let loading = true;
   let score = null;
@@ -19,6 +20,10 @@
   let chatSessionId = null;
   let scoreboardUrl = null;
   let error = null;
+
+  // Drift system state
+  let drift = null;
+  let handshakeLoading = false;
 
   // Scoreboard data
   let scoreData = {
@@ -94,6 +99,15 @@
           };
         }
       }
+      // Fetch Drift state
+      try {
+        const driftData = await wirebotApi.getDrift();
+        if (driftData && driftData.drift) {
+          drift = driftData.drift;
+        }
+      } catch (e) {
+        console.warn('Drift fetch failed:', e);
+      }
     } catch (err) {
       console.error('WirebotTab load error:', err);
       error = err.message;
@@ -115,6 +129,29 @@
     if (result.sessionId) chatSessionId = result.sessionId;
     askInput = '';
     chatLoading = false;
+  }
+
+  async function handleHandshake() {
+    handshakeLoading = true;
+    try {
+      const result = await wirebotApi.handshake();
+      if (result && result.drift_score !== undefined) {
+        drift = { ...drift, score: result.drift_score, signal: result.drift_signal, handshake_streak: result.handshake_streak };
+      }
+    } catch (e) {
+      console.error('Handshake failed:', e);
+    }
+    handshakeLoading = false;
+  }
+
+  function driftSignalLabel(signal) {
+    const labels = { deep_sync: 'DEEP SYNC', in_drift: 'IN DRIFT', drifting: 'DRIFTING', weak: 'WEAK', disconnected: 'OFFLINE' };
+    return labels[signal] || signal?.toUpperCase() || '?';
+  }
+
+  function driftSignalColor(signal) {
+    const colors = { deep_sync: '#00ff64', in_drift: '#4a9eff', drifting: '#ffc800', weak: '#ff9500', disconnected: '#ff3232' };
+    return colors[signal] || '#666';
   }
 
   function handleKeydown(e) {
@@ -195,6 +232,56 @@
         {/if}
       </div>
     </div>
+
+    <!-- Neural Drift Card -->
+    {#if drift}
+      <div class="rounded-lg p-3 border" 
+           style="background: {driftSignalColor(drift.signal)}10; border-color: {driftSignalColor(drift.signal)}30">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">🧠</span>
+            <span class="text-xs font-bold uppercase tracking-widest" style="color: {driftSignalColor(drift.signal)}">
+              {driftSignalLabel(drift.signal)}
+            </span>
+          </div>
+          <span class="text-lg font-bold" style="color: {driftSignalColor(drift.signal)}">{drift.score}%</span>
+        </div>
+        <div class="w-full bg-gray-700/50 rounded-full h-1.5">
+          <div class="h-1.5 rounded-full transition-all" 
+               style="width: {drift.score}%; background: linear-gradient(90deg, {driftSignalColor(drift.signal)}, {driftSignalColor(drift.signal)}88)">
+          </div>
+        </div>
+        <div class="flex justify-between mt-2 text-xs text-gray-400">
+          {#if drift.handshake_streak > 0}
+            <span>🤝 {drift.handshake_streak}d streak</span>
+          {:else}
+            <button class="text-blue-400 hover:text-blue-300" 
+                    on:click={handleHandshake} disabled={handshakeLoading}>
+              {handshakeLoading ? '⏳' : '🤝'} {handshakeLoading ? 'Syncing...' : 'Start Handshake'}
+            </button>
+          {/if}
+          <span style="opacity:0.5">modesty: {Math.round((1 - (drift.modesty_reflex || 0)) * 100)}% open</span>
+        </div>
+      </div>
+
+      <!-- R.A.B.I.T. Alert -->
+      {#if drift.rabbit?.active}
+        <div class="rounded-lg p-3 border border-amber-500/30 bg-amber-900/20">
+          <div class="flex items-start gap-2">
+            <span class="text-lg">🐇</span>
+            <div>
+              <div class="text-xs font-bold text-amber-400 uppercase">R.A.B.I.T. DETECTED</div>
+              <div class="text-sm text-gray-300 mt-1">{drift.rabbit.message}</div>
+            </div>
+          </div>
+        </div>
+      {/if}
+    {/if}
+
+    <!-- Pairing Profile Summary -->
+    {#if user}
+      <ProfileSummary {scoreboardUrl} />
+    {/if}
 
     <!-- Recent Activity Feed (compact) -->
     {#if scoreData.feed && scoreData.feed.length > 0}

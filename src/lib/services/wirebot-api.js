@@ -248,6 +248,69 @@ export async function getMemberInfo() {
   }
 }
 
+/**
+ * Get pairing profile (effective view) from scoreboard
+ */
+export async function getProfile() {
+  const token = await getToken();
+  if (!token) return null;
+
+  // Get scoreboard URL
+  const resp = await fetch(`${RING_LEADER_API}/member/scoreboard`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await resp.json();
+  
+  if (!data.provisioned || !data.scoreboard_url) return null;
+
+  const profileResp = await fetch(`${data.scoreboard_url}/v1/pairing/profile/effective`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!profileResp.ok) throw new Error(`Profile unavailable (${profileResp.status})`);
+  return profileResp.json();
+}
+
+/**
+ * Get live Drift state (Neural sync quality + R.A.B.I.T. + Ghost Drift)
+ */
+export async function getDrift() {
+  const token = await getToken();
+  if (!token) return null;
+
+  const resp = await fetch(`${RING_LEADER_API}/member/scoreboard`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await resp.json();
+  if (!data.provisioned || !data.scoreboard_url) return null;
+
+  const driftResp = await fetch(`${data.scoreboard_url}/v1/pairing/neural-drift`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!driftResp.ok) return null;
+  return driftResp.json();
+}
+
+/**
+ * Record Neural Handshake (daily sync ritual)
+ */
+export async function handshake() {
+  const token = await getToken();
+  if (!token) return null;
+
+  const resp = await fetch(`${RING_LEADER_API}/member/scoreboard`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await resp.json();
+  if (!data.provisioned || !data.scoreboard_url) return null;
+
+  const hsResp = await fetch(`${data.scoreboard_url}/v1/pairing/handshake`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!hsResp.ok) return null;
+  return hsResp.json();
+}
+
 export default {
   exchangeToken,
   validateAuth,
@@ -257,6 +320,9 @@ export default {
   getChecklist,
   askWirebot,
   getMemberInfo,
+  getProfile,
+  getDrift,
+  handshake,
   getToken,
   setToken
 };
