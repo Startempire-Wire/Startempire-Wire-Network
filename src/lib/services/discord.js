@@ -1,4 +1,4 @@
-import { authStore } from './auth';
+import { authStore } from '../../services/auth';
 
 const LOG_PREFIX = '[Discord Service]';
 const DISCORD_API_BASE = 'https://discord.com/api/v10'; // Use latest API version
@@ -127,12 +127,9 @@ export class VoiceHandler {
     }
 
     async joinChannel(channelId) {
-        const { voice } = await import('@discordjs/voice');
-        this.connection = voice.joinVoiceChannel({
-            channelId,
-            guildId: chrome.storage.local.get('guildId'),
-            adapterCreator: chrome.runtime.getURL('discord-adapter')
-        });
+        // Voice channels not available in extension context
+        // TODO: Implement via Discord Bot API or webhook proxy
+        console.log(`[Discord] Voice join requested for channel ${channelId} — not available in extension`);
     }
 }
 

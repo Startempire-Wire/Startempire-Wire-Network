@@ -17,3 +17,6 @@ npm-debug.log*
 
 # packed files
 /release
+.svelte-kit/
+dist/
+node_modules/

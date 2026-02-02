@@ -1,6 +1,7 @@
 import { auth } from '$lib/services';
 import * as wordpressService from '$lib/services/wordpress.js';
-import Discord from 'discord.js';
+// Discord integration planned — uses Chrome messaging API, not discord.js Node lib
+// import Discord from 'discord.js';
 
 // Port management for sidepanel communication
 let sidePanelPort = null;
@@ -489,13 +490,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-const client = new Discord.Client({
-  intents: ['Guilds', 'GuildMessages']
-});
-
+// Discord messaging via REST API (no discord.js in browser extension)
 chrome.runtime.onMessage.addListener((request) => {
   if (request.action === 'discordMessage') {
-    client.channels.cache.get('CHANNEL_ID').send(request.message);
+    // TODO: Implement via Discord webhook or Ring Leader proxy
+    console.log('[Background] Discord message queued:', request.message);
   }
 });
 
@@ -510,10 +509,23 @@ const setupWebSocket = (tier) => {
 
 chrome.runtime.onMessage.addListener((request) => {
   if (request.action === 'wirebotQuery') {
-    const aiEndpoint = `https://wirebot.chat/api?q=${encodeURIComponent(request.query)}`;
-    fetch(aiEndpoint)
+    // Use Wirebot gateway chat completions API
+    fetch('https://helm.wirebot.chat/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'wirebot',
+        messages: [{ role: 'user', content: request.query }]
+      })
+    })
       .then(response => response.json())
-      .then(data => chrome.tabs.sendMessage(request.tabId, data));
+      .then(data => {
+        const content = data.choices?.[0]?.message?.content || 'No response';
+        chrome.tabs.sendMessage(request.tabId, { content });
+      })
+      .catch(err => {
+        chrome.tabs.sendMessage(request.tabId, { error: err.message });
+      });
   }
 });
 

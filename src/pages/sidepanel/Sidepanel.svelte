@@ -4,8 +4,6 @@
   import { onMount } from 'svelte';
   import { authStore } from '$lib/services';
   import { getNetworkStats } from '$lib/services/network';
-  import { Button } from 'shadcn-svelte';
-  import { LucideGlobe } from 'lucide-svelte';
 
   let stats = [];
 
@@ -15,26 +13,24 @@
   });
 </script>
 
-<div class="min-h-screen bg-white dark:bg-gray-800">
-  <header class="border-b border-gray-200 dark:border-gray-700 p-4">
-    <h1 class="text-xl font-bold text-gray-900 dark:text-white">
+<div class="min-h-screen bg-gray-900 text-gray-100">
+  <header class="border-b border-gray-700 px-4 py-3 flex items-center gap-2">
+    <span class="text-lg">⚡</span>
+    <h1 class="text-base font-semibold">
       Startempire Wire Network
     </h1>
   </header>
 
   <Tabs />
 
-  <Button variant="network" class="bg-wire-primary">
-    <LucideGlobe class="mr-2" />
-    Network Dashboard
-  </Button>
-
-  <dl class="grid grid-cols-3 gap-4">
+  {#if stats.length > 0}
+  <dl class="grid grid-cols-3 gap-2 px-4 py-2 border-t border-gray-700">
     {#each stats as stat}
-      <div class="border p-4">
-        <dt class="text-sm">{stat.label}</dt>
-        <dd class="text-2xl font-bold">{stat.value}</dd>
+      <div class="text-center">
+        <dd class="text-lg font-bold text-blue-400">{stat.value}</dd>
+        <dt class="text-xs text-gray-400">{stat.label}</dt>
       </div>
     {/each}
   </dl>
+  {/if}
 </div>
