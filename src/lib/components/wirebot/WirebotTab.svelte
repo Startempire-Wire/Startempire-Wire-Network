@@ -83,6 +83,16 @@
           scoreData = { ...scoreData, ...merged };
           if (sb.feed) scoreData.feed = sb.feed;
         }
+
+        // Checklist from dashboard mode
+        if (sb.checklist) {
+          checklistSummary = {
+            total: sb.checklist.total || 0,
+            completed: sb.checklist.completed || 0,
+            percent: sb.checklist.percent || 0,
+            nextTask: sb.checklist.next_task || '',
+          };
+        }
       }
     } catch (err) {
       console.error('WirebotTab load error:', err);

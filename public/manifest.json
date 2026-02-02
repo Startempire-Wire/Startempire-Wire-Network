@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Startempire Wire Network",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Connect with the Startempire Wire community, discover opportunities and share resources",
   "icons": {
     "16": "icons/icon_16.png",
