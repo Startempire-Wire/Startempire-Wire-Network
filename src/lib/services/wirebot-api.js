@@ -271,6 +271,40 @@ export async function getProfile() {
 }
 
 /**
+ * Full profile from Ring Leader — user + scoreboard + pairing + drift + integrations
+ * Single API call instead of 4+ separate calls. Use this for initial load.
+ */
+export async function getFullProfile() {
+  const token = await getToken();
+  if (!token) return null;
+
+  const resp = await fetch(`${RING_LEADER_API}/member/profile`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!resp.ok) return null;
+  return resp.json();
+}
+
+/**
+ * Update preferences via Ring Leader
+ */
+export async function updatePreferences(prefs) {
+  const token = await getToken();
+  if (!token) return null;
+
+  const resp = await fetch(`${RING_LEADER_API}/member/profile`, {
+    method: 'POST',
+    headers: { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(prefs)
+  });
+  if (!resp.ok) return null;
+  return resp.json();
+}
+
+/**
  * Get live Drift state (Neural sync quality + R.A.B.I.T. + Ghost Drift)
  */
 export async function getDrift() {
@@ -321,6 +355,8 @@ export default {
   askWirebot,
   getMemberInfo,
   getProfile,
+  getFullProfile,
+  updatePreferences,
   getDrift,
   handshake,
   getToken,
