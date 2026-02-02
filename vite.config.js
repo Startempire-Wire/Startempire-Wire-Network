@@ -25,11 +25,13 @@ export default defineConfig({
   <script type="module" src="./${name}.js"></script>
 </body>
 </html>`;
- 
+
         pages.forEach(page => {
           try {
+            const dir = resolve(__dirname, 'dist');
+            mkdirSync(dir, { recursive: true });
             writeFileSync(
-              resolve(__dirname, `dist/${page}.html`),
+              resolve(dir, `${page}.html`),
               template(page)
             );
             console.log(`Generated ${page}.html`);

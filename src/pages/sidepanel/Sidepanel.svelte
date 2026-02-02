@@ -4,6 +4,8 @@
   import { onMount } from 'svelte';
   import { authStore } from '$lib/services';
   import { getNetworkStats } from '$lib/services/network';
+  import { Button } from 'shadcn-svelte';
+  import { LucideGlobe } from 'lucide-svelte';
 
   let stats = [];
 
@@ -21,6 +23,11 @@
   </header>
 
   <Tabs />
+
+  <Button variant="network" class="bg-wire-primary">
+    <LucideGlobe class="mr-2" />
+    Network Dashboard
+  </Button>
 
   <dl class="grid grid-cols-3 gap-4">
     {#each stats as stat}

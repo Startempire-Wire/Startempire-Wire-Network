@@ -1,7 +1,12 @@
-THE FULL SOFTWARE ECOSYTEM CONTEXT:  This document is subject to continuous refinement.  The actual core of the hub will be the website https://startempirewire.com but I have purchased the domain name https://startempirewire.network as the core marketing site and place to allow downloads of the Startempire Wire Network Connect Plugin & the Startempire Wire Network Chrome Extension (Modern Web Ring). So the ecosystem we are developing looks something like this in a rough (incomplete outline):
+
 
 Website #1 - Startempire Wire (Parent Membership Website) [ https://startempirewire.com ]
-- MemberPress (Primary Auth / Integrated With WordPress Auth) & Buddyboss Powered Parent Website
+- WordPress / MemberPress (Primary Auth / Integrated With WordPress Auth Shared Across Network) & Buddyboss Powered Parent Website
+- Shared Network Authentication.
+- Authentication Flow:  User Logs into the network (once) via one method and has full access to all features and sites of the network.
+-- PRIMARY AUTH: WordPress Auth Shared Across Network
+-- SECONDARY AUTH: OAuth & OpenID Connect Shared Across Network
+-- TERTIARY AUTH: Discord Auth Shared Across Network
 - Uses MemberPress + WordPress User Roles to Handle Startempire Wire Membership Levels (Role Based: Free (Non-Verified - Public Access), FreeWire, Wire, ExtraWire), Access to Website Content & Payments Processing
 - Houses Canonical User Level/Role Based Premium Content that will be distributed to the Ring Leader Plugin then to the UI of Startempire Wire Network Connect Plugin & The Startempire Wire Network Chrome Extension. 
 - Content & Data To be served via WordPress REST API to Ring Leader Plugin Includes:
@@ -101,6 +106,29 @@ Additional Service Details:
     - Real-time preview generation
     - Cache utilization
     - Quality adaptation
+
+
+WordPress Plugin #4 - Startempire Wire Network Websockets
+- CODE: https://github.com/Startempire-Wire/Startempire-Wire-Network-Websockets.git
+- Handles the Websocket Server for the entire Startempire Wire Network
+- Uses Node.js & Socket.io to create a robust websocket server with a focus on performance, scalability, ease of use, comprehensive documentation, & a robust admin dashboard.
+- Uses AsyncAPI to describe our WebSocket-based APIs (https://www.asyncapi.com/)
+- Startempire Wire Network Chrome Extension duties: 
+-- Enables data streaming from the Startempire Wire Network Ring Leader Plugin to the Startempire Wire Network Chrome Extension
+-- Enables data streaming from the Startempire Wire Network Ring Leader Plugin to the Startempire Wire Network Connect Plugin
+-- Facilitates one to one & one to many connections for the entire Startempire Wire Network while maintaining an agnostic setup that can be used on any server or service. 
+--- Connection Types: 
+---- User -> User in Chrome Extension (Direct Messaging)
+---- Parent Website -> Ring Leader -> Chrome Extension
+---- Parent Website -> Ring Leader -> Connect Plugin
+---- Connect Plugin -> Ring Leader -> Chrome Extension
+---- Connect Plugin -> Ring Leader -> Parent Website
+---- Chrome Extension -> Ring Leader -> Parent Website
+---- Chrome Extension -> Ring Leader -> Connect Plugin
+---- Chrome Extension -> Ring Leader -> Chrome Extension
+- Maintains a list of all connections in the entire Startempire Wire Network or whatever network the plugin is installed on.
+- Offers a robust set of REST API Endpoints for external services to consume for monitoring, analytics, and more.
+- Full Admin UI gives granular control & management of the websocket server and the APIs it offers.
 
 Chrome Extension - Startempire Wire Network Chrome Extension
 - CODE: https://github.com/Startempire-Wire/Startempire-Wire-Network-Chrome-Extension.git

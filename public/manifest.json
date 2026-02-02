@@ -26,7 +26,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://*.startempirewire.com/*",
+        "*://*.startempirewire.network/*",
+        "*://*/*"
+      ],
       "js": ["contentScript.js"],
       "css": ["styles/app.css"]
     }
@@ -41,25 +45,43 @@
     "webRequest",
     "notifications",
     "webNavigation",
-    "discord.voice.channel"
+    "identity.email"
   ],
-  "host_permissions": ["https://*/*", "<all_urls>", "https://discord.com/api/*"],
+  "host_permissions": [
+    "https://startempirewire.com/*",
+    "https://startempirewire.network/*",
+    "https://discord.com/api/*",
+    "*://*.buddyboss.com/*",
+    "*://*.memberpress.com/*"
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "oauth2": {
     "client_id": "${WORDPRESS_CLIENT_ID}",
     "scopes": [
+      "openid",
+      "identify",
       "profile",
       "network_access",
-      "https://startempirewire.com/*",
-      "https://startempirewire.network/*",
+      "https://*.startempirewire.com/*",
+      "https://*.startempirewire.network/*",
       "https://discord.com/api/oauth2",
+      "https://*.startempirewire.com/wp-json/*",
       "guilds",
       "guilds.members.read",
       "discord:guilds",
       "discord:guilds.join",
-      "discord:guilds.members.read"
+      "discord:guilds.members.read",
+      "buddyboss_platform",
+      "memberpress"
     ]
+  },
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "tier_rules",
+      "enabled": true,
+      "path": "rules.json"
+    }]
   }
 }

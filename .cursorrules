@@ -240,14 +240,13 @@ service_integration:
       wordPressNative:
         priority: primary
         endpoints:
-          base: /wp-json/startempire/v1
-          auth: /auth
+          base: /wp-json/wp/v2
           status: /status
           roles: /roles
       memberPress:
         priority: secondary
         endpoints:
-          base: /wp-json/startempire/v1/memberpress
+          base: /wp-json/mp/v1
           auth: /auth
           status: /status
           roles: /roles
@@ -259,7 +258,7 @@ service_integration:
       buddyBoss:
         priority: tertiary
         endpoints:
-          base: /wp-json/startempire/v1/buddyboss
+          base: /wp-json/buddyboss/v1
           profile: /profile
           social: /social
           activity: /activity
@@ -271,7 +270,7 @@ service_integration:
       discord:
         priority: quaternary
         endpoints:
-          base: /wp-json/startempire/v1/discord
+          base: https://discord.com/api/v14
           auth: /oauth
           webhook: /webhook
           streaming: /streaming
@@ -280,6 +279,7 @@ service_integration:
           - Live streaming integration
           - Event broadcasting
           - Role synchronization
+        scopes: ["guilds", "guilds.members.read", "guilds.join"]
   real_time_communication:
     websocket:
       handler: background_service
@@ -835,6 +835,9 @@ technical_requirements:
             - name: structure-generator.js
               path: scripts/structure-generator.js
               extension: .js
+            - name: test-setup.js
+              path: scripts/test-setup.js
+              extension: .js
             - name: watch-structure.js
               path: scripts/watch-structure.js
               extension: .js
@@ -858,6 +861,12 @@ technical_requirements:
                               - name: Tabs.svelte
                                 path: src/lib/components/navigation/Tabs.svelte
                                 extension: .svelte
+                              - name: WebRing.svelte
+                                path: src/lib/components/navigation/WebRing.svelte
+                                extension: .svelte
+                              - name: WebRingNav.svelte
+                                path: src/lib/components/navigation/WebRingNav.svelte
+                                extension: .svelte
                         popup:
                           path: src/lib/components/popup
                           contents:
@@ -866,14 +875,6 @@ technical_requirements:
                               - name: popup.svelte
                                 path: src/lib/components/popup/popup.svelte
                                 extension: .svelte
-                        services:
-                          path: src/lib/components/services
-                          contents:
-                            directories: {}
-                            files:
-                              - name: auth.js
-                                path: src/lib/components/services/auth.js
-                                extension: .js
                         sidepanel:
                           path: src/lib/components/sidepanel
                           contents:
@@ -912,6 +913,15 @@ technical_requirements:
                       files:
                         - name: screenshot.js
                           path: src/lib/services/screenshot.js
+                          extension: .js
+                        - name: index.js
+                          path: src/lib/services/index.js
+                          extension: .js
+                        - name: discord.js
+                          path: src/lib/services/discord.js
+                          extension: .js
+                        - name: wordpress.js
+                          path: src/lib/services/wordpress.js
                           extension: .js
                 files:
                   - name: utils.js
@@ -1005,15 +1015,6 @@ technical_requirements:
       - name: components.json
         path: components.json
         extension: .json
-      - name: cursorrules-BAK
-        path: cursorrules-BAK
-        extension: ''
-      - name: cursorrules-BAK2
-        path: cursorrules-BAK2
-        extension: ''
-      - name: new.tree
-        path: new.tree
-        extension: .tree
       - name: startempire-wire-network.code-workspace
         path: startempire-wire-network.code-workspace
         extension: .code-workspace
@@ -1023,40 +1024,44 @@ ui_directives:
     This section outlines the preferred UI libraries and guidelines for their use in the project. The goal is to ensure consistency and leverage the strengths of each library.
 
   libraries:
-    - name: ShadCN-svelte
+    - name: ShadCN-svelte (Component Library)
       url: https://shadcn-svelte.com/docs
       priority: 1
       usage: >
-        ShadCN-svelte is the primary UI library for this project. It should be used for all new components and UI elements where applicable. Its integration with Svelte provides a seamless development experience and ensures consistency across the UI.
+        ShadCN-svelte is the primary UI *component* library for this project. It should be used for all new components and UI elements where applicable. Its integration with Svelte provides a seamless development experience and ensures consistency across the UI. ShadCN-svelte components are built using Tailwind CSS.
+      components:
+        - Command Palette
+        - Tier Badges
+        - Network Graph
 
-    - name: Tailwind CSS
+    - name: Tailwind CSS (CSS Framework)
       url: https://tailwindcss.com/docs/installation/framework-guides/sveltekit
       priority: 2
       usage: >
-        Tailwind CSS is the primary CSS framework for this project. It should be used for all new components and UI elements where applicable. Its integration with Svelte provides a seamless development experience and ensures consistency across the UI.
+        Tailwind CSS is the underlying CSS framework for this project. It provides the styling foundation for ShadCN-svelte components and can be used directly for custom styling when necessary.
 
-    - name: Lucide Svelte
+    - name: Lucide Svelte (Icon Library)
       url: https://lucide.dev/guide/packages/lucide-svelte
       priority: 2
       usage: >
-        Lucide Svelte is the primary icon library for this project. It should be used for all new components and UI elements where applicable. Its integration with Svelte provides a seamless development experience and ensures consistency across the UI.
+        Lucide Svelte is the primary icon library for this project. It should be used for all icons within ShadCN-svelte components and custom UI elements.
 
     - name: Melt UI
       url: https://www.melt-ui.com/docs/introduction
       priority: 2
       usage: >
-        Melt UI can be used for specific components that require its unique features. It is suitable for complex UI interactions and should be considered when ShadCN-svelte does not meet the requirements.
+        Melt UI can be used for specific components that require its unique features, especially for complex UI interactions not readily available in ShadCN-svelte.
 
     - name: Skeleton UI
       url: https://www.skeleton.dev/docs/get-started
       priority: 3
       usage: >
-        Skeleton UI is ideal for prototyping and quickly building out UI elements. It can be used in the early stages of development or for components that require rapid iteration.
+        Skeleton UI is ideal for prototyping and quickly building out UI elements in early development stages or for components requiring rapid iteration before potentially being replaced with ShadCN-svelte or custom components.
 
   guidelines:
     - Ensure that ShadCN-svelte is the first choice for new UI components.
-    - Evaluate the specific needs of a component to determine if Melt UI or Skeleton UI is more appropriate.
-    - Maintain consistency in styling and interactions across the UI by adhering to the chosen library's conventions.
+    - Evaluate the specific needs of a component to determine if Melt UI or Skeleton UI is more appropriate for complex interactions.
+    - Maintain consistency in styling and interactions across the UI by adhering to Tailwind CSS and the chosen component library's conventions.
     - Document any deviations from these guidelines and the rationale behind them.
 
 accessibility:

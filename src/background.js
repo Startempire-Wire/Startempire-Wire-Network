@@ -1,4 +1,6 @@
 import { auth } from '$lib/services';
+import * as wordpressService from '$lib/services/wordpress.js';
+import Discord from 'discord.js';
 
 // Port management for sidepanel communication
 let sidePanelPort = null;
@@ -16,15 +18,30 @@ const CACHE_DURATIONS = {
 
 // Implement tiered caching strategy
 const CACHE_CONFIG = {
-  free: {
-    strategy: 'StaleWhileRevalidate',
-    options: { cacheName: 'free-cache', maxAgeSeconds: 3600 }
-  },
-  extraWire: {
-    strategy: 'CacheFirst',
-    options: { cacheName: 'premium-cache', maxAgeSeconds: 86400 }
-  }
+  extraWire: { duration: 24 * 60 * 60 * 1000 }, // 24 hours
+  wire: { duration: 12 * 60 * 60 * 1000 },      // 12 hours
+  freeWire: { duration: 6 * 60 * 60 * 1000 },   // 6 hours
+  free: { duration: 1 * 60 * 60 * 1000 }        // 1 hour
 };
+
+const CACHE_TIERS = {
+  Free: { duration: 30 * 60 * 1000 },
+  FreeWire: { duration: 60 * 60 * 1000 },
+  Wire: { duration: 300 * 60 * 1000 },
+  ExtraWire: { duration: 1000 * 60 * 1000 }
+};
+
+const CONTENT_CLASSIFIER = {
+  message_boards: /message-boards/,
+  articles: /articles/,
+  podcasts: /podcasts/
+};
+
+function classifyContent(url) {
+  return Object.entries(CONTENT_CLASSIFIER).find(([_, regex]) =>
+    regex.test(url)
+  )?.[0] || 'unknown';
+}
 
 /**
  * Initialize extension storage and settings on installation
@@ -50,6 +67,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       console.error(`${LOG_PREFIX} Error stack:`, error.stack);
     }
   }
+
+  chrome.storage.local.set({ installed: Date.now() });
+
 });
 
 /**
@@ -104,6 +124,31 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       case 'CACHE_CONTENT':
         console.debug(`${msgPrefix} Cache content request received:`, request.url);
         handleCacheContentRequest(request, sender, sendResponse);
+        return true; // Keep channel open for async response
+
+      case 'fetchArticles':
+        console.debug(`${msgPrefix} Fetch articles request received`);
+        handleFetchArticlesRequest(request, sender, sendResponse);
+        return true; // Keep channel open for async response
+
+      case 'UPDATE_CONTENT':
+        console.debug(`${msgPrefix} Content update request received`);
+        handleContentUpdateRequest(request, sender, sendResponse);
+        return true; // Keep channel open for async response
+
+      case 'WS_CONNECT':
+        console.debug(`${msgPrefix} WebSocket connection request received`);
+        handleWebSocketConnection(request, sender, sendResponse);
+        return true; // Keep channel open for async response
+
+      case 'discordMessage':
+        console.debug(`${msgPrefix} Discord message received:`, request.message);
+        handleDiscordMessage(request, sender, sendResponse);
+        return true; // Keep channel open for async response
+
+      case 'wirebotQuery':
+        console.debug(`${msgPrefix} Wirebot query received:`, request.query);
+        handleWirebotQuery(request, sender, sendResponse);
         return true; // Keep channel open for async response
 
       default:
@@ -255,6 +300,16 @@ async function handleCacheContentRequest(request, sender, sendResponse) {
   }
 }
 
+/**
+ * Handle fetch articles requests
+ * Manages fetching articles from WordPress REST API
+ */
+async function handleFetchArticlesRequest(request, sender, sendResponse) {
+  const articles = await wordpressService.fetchArticles();
+  sendResponse({ articles: articles }); // Send data back to sender (e.g., popup)
+  return true; // Indicate asynchronous response
+}
+
 // Log extension installation completion
 chrome.runtime.onInstalled.addListener(() => {
   console.log(`${LOG_PREFIX} Extension installed successfully - Screenshot service ready`);
@@ -268,4 +323,197 @@ const createRealtimeConnection = () => {
     return new EventSource('https://network.hub/events');
   }
 };
+
+const realtimeConnections = {}; // Store WebSocket connections per tab/user
+
+function setupRealtimeConnection(tabId, membershipLevel) {
+  const wsPrefix = `${LOG_PREFIX} [WebSocket]`;
+  console.log(`${wsPrefix} Setting up WebSocket for tab ${tabId}, level: ${membershipLevel}`);
+
+  if (realtimeConnections[tabId]) {
+    console.log(`${wsPrefix} Connection already exists for tab ${tabId}, closing old one`);
+    realtimeConnections[tabId].close();
+  }
+
+  const ws = new WebSocket('wss://startempirewire.network/socket');
+  realtimeConnections[tabId] = ws;
+
+  ws.onopen = () => {
+    console.log(`${wsPrefix} WebSocket connection opened for tab ${tabId}`);
+    ws.send(JSON.stringify({ type: 'auth', membership: membershipLevel })); // Send auth info
+  };
+
+  ws.onmessage = (event) => {
+    const messageData = JSON.parse(event.data);
+    console.debug(`${wsPrefix} Received message from server:`, messageData);
+
+    // Example: Dispatch DOM update to content script
+    if (messageData.type === 'domUpdate') {
+      chrome.tabs.sendMessage(tabId, {
+        action: 'updateDOM',
+        data: messageData.payload // Assuming payload contains DOMUpdateData
+      });
+    } else if (messageData.type === 'notification') {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon_48.png',
+        title: 'Network Update',
+        message: messageData.message
+      });
+    }
+    // ... handle other message types ...
+  };
+
+  ws.onerror = (error) => {
+    console.error(`${wsPrefix} WebSocket error for tab ${tabId}:`, error);
+    delete realtimeConnections[tabId]; // Remove on error
+  };
+
+  ws.onclose = () => {
+    console.log(`${wsPrefix} WebSocket connection closed for tab ${tabId}`);
+    delete realtimeConnections[tabId]; // Remove on close
+  };
+}
+
+// Listen for changes in authentication state (example - adjust to your auth logic)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "authStatusChanged") {
+    const tabId = sender.tab?.id;
+    const membershipLevel = request.membershipLevel; // Get membership level from auth status
+
+    if (tabId && membershipLevel) {
+      setupRealtimeConnection(tabId, membershipLevel);
+    } else {
+      console.warn(`${LOG_PREFIX} [Auth Status] Tab ID or membership level missing, cannot setup WebSocket`);
+    }
+  }
+  sendResponse({ result: "Auth status processed by background script" });
+  return true; // Required for async sendResponse in some cases
+});
+
+// Example: On tab activation, re-establish connection if needed (optional - adjust logic)
+chrome.tabs.onActivated.addListener(activeInfo => {
+  // ... (logic to check auth state and re-setup connection if necessary) ...
+  // This is a simplified example - you might need more robust connection management
+});
+
+// Cache cleanup
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === 'cleanCache') {
+    const data = await chrome.storage.local.get('networkContent');
+    if (data.networkContent?.expiresAt < Date.now()) {
+      await chrome.storage.local.remove('networkContent');
+    }
+  }
+});
+
+async function handleContentUpdateRequest(request, sender, sendResponse) {
+  try {
+    const memberTier = await getMemberTier();
+    const cacheData = {
+      content: request.data,
+      timestamp: Date.now(),
+      expiresAt: Date.now() + getTierDuration(memberTier)
+    };
+
+    await chrome.storage.local.set({
+      networkContent: cacheData
+    });
+
+    // Schedule cache cleanup
+    chrome.alarms.create('cleanCache', {
+      delayInMinutes: CACHE_CONFIG[memberTier].duration / (60 * 1000)
+    });
+
+    sendResponse({ success: true });
+  } catch (error) {
+    console.error('Content update failed:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+let ws;
+const maintainSocket = () => {
+  if (ws) return;
+  ws = new WebSocket('wss://network-api/ws');
+  ws.onmessage = (event) => {
+    chrome.runtime.sendMessage({ type: 'WS_UPDATE', data: event.data });
+  };
+  chrome.alarms.create('ws_keepalive', { periodInMinutes: 1 });
+};
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'reconnect-ws') maintainSocket();
+});
+
+// Add to background.js
+chrome.webRequest.onBeforeRequest.addListener(details => {
+  if (rateLimitExceeded(details.url)) return { cancel: true };
+}, { urls: ["<all_urls>"] }, ["blocking"]);
+
+function getContentRules(tier) {
+  return TIER_RULES[tier] || DEFAULT_RULES;
+}
+
+chrome.webRequest.onCompleted.addListener(
+  handleMemberPress
+);
+
+const CONTENT_RULES = {
+  free: { refresh: 60, domains: ['startempirewire.com'] },
+  extraWire: { refresh: 10, domains: ['*'] }
+};
+
+chrome.webNavigation.onCompleted.addListener(async ({ tabId, url }) => {
+  const tier = await getMemberTier();
+  chrome.scripting.executeScript({
+    target: { tabId },
+    files: [`content-${tier}.js`]
+  });
+});
+
+// Replace content script WebSocket with background service
+const wsConnections = new Map();
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'WS_PROXY') {
+    const tabId = sender.tab.id;
+    if (!wsConnections.has(tabId)) {
+      const ws = new WebSocket(request.url);
+      ws.onmessage = (event) => {
+        chrome.tabs.sendMessage(tabId, { type: 'WS_UPDATE', data: event.data });
+      };
+      wsConnections.set(tabId, ws);
+    }
+    return true;
+  }
+});
+
+const client = new Discord.Client({
+  intents: ['Guilds', 'GuildMessages']
+});
+
+chrome.runtime.onMessage.addListener((request) => {
+  if (request.action === 'discordMessage') {
+    client.channels.cache.get('CHANNEL_ID').send(request.message);
+  }
+});
+
+const setupWebSocket = (tier) => {
+  const ws = new WebSocket(`wss://network.startempirewire.com/ws?tier=${tier}`);
+  ws.onmessage = (event) => {
+    chrome.storage.session.set({ lastUpdate: Date.now() });
+    chrome.runtime.sendMessage({ type: 'NETWORK_UPDATE', data: event.data });
+  };
+  return ws;
+};
+
+chrome.runtime.onMessage.addListener((request) => {
+  if (request.action === 'wirebotQuery') {
+    const aiEndpoint = `https://wirebot.chat/api?q=${encodeURIComponent(request.query)}`;
+    fetch(aiEndpoint)
+      .then(response => response.json())
+      .then(data => chrome.tabs.sendMessage(request.tabId, data));
+  }
+});
 

@@ -74,7 +74,7 @@ function handleDOMChange(mutation) {
  */
 function initialize() {
   console.log(`${LOG_PREFIX} Initializing content script`);
-  
+
   try {
     setupMessageListener();
     setupDOMObserver();
@@ -91,7 +91,7 @@ function initialize() {
  */
 function setupMessageListener() {
   console.debug(`${LOG_PREFIX} Setting up message listener`);
-  
+
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const msgPrefix = `${LOG_PREFIX} [Message Handler]`;
     console.debug(`${msgPrefix} Received message:`, request);
@@ -120,11 +120,11 @@ function setupMessageListener() {
  */
 function setupDOMObserver() {
   console.debug(`${LOG_PREFIX} Setting up DOM observer`);
-  
+
   const observer = new MutationObserver((mutations) => {
     const observerPrefix = `${LOG_PREFIX} [DOM Observer]`;
     console.debug(`${observerPrefix} DOM mutations detected:`, mutations.length);
-    
+
     mutations.forEach(mutation => {
       if (mutation.type === 'childList') {
         handleDOMChange(mutation);
@@ -143,7 +143,7 @@ function setupDOMObserver() {
  */
 function injectStyles() {
   console.debug(`${LOG_PREFIX} Injecting styles`);
-  
+
   try {
     const style = document.createElement('style');
     style.textContent = `
@@ -169,6 +169,34 @@ function injectStyles() {
   } catch (error) {
     console.error(`${LOG_PREFIX} Style injection failed:`, error);
   }
+}
+
+/**
+ * Apply content restrictions based on membership level
+ * @param {string} membershipLevel - Current user's membership level
+ */
+function applyContentRestrictions(membershipLevel) {
+  const restrictionPrefix = `${LOG_PREFIX} [Content Restriction]`;
+  console.debug(`${restrictionPrefix} Applying content restrictions for level:`, membershipLevel);
+
+  const contentSelectors = {
+    'free': ['.premium-content'], // Selectors for content hidden for 'free' tier
+    'freeWire': ['.extra-wire-content'], // Selectors hidden for 'freeWire'
+    'wire': ['.extra-wire-content'], // Selectors hidden for 'wire' (same as freeWire in this example)
+    'extraWire': [] // No restrictions for 'extraWire'
+  };
+
+  const selectorsToHide = contentSelectors[membershipLevel] || contentSelectors['free']; // Default to 'free' restrictions
+
+  selectorsToHide.forEach(selector => {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(element => {
+      element.style.display = 'none'; // Hide restricted content
+      console.debug(`${restrictionPrefix} Hidden element:`, selector, element);
+    });
+  });
+
+  console.debug(`${restrictionPrefix} Content restrictions applied`);
 }
 
 // Initialize content script
