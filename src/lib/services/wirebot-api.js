@@ -18,15 +18,24 @@ const WIREBOT_API = 'https://helm.wirebot.chat';
  * Get Ring Leader JWT from stored auth
  */
 async function getToken() {
-  const stored = await chrome.storage.local.get(['sewn_jwt']);
-  return stored.sewn_jwt || null;
+  try {
+    const stored = await chrome.storage.local.get(['sewn_auth', 'sewn_jwt']);
+    return stored.sewn_auth?.jwt || stored.sewn_jwt || null;
+  } catch {
+    // Not in extension context (dev mode)
+    return null;
+  }
 }
 
 /**
  * Set Ring Leader JWT
  */
 async function setToken(jwt) {
-  await chrome.storage.local.set({ sewn_jwt: jwt });
+  try {
+    await chrome.storage.local.set({ sewn_jwt: jwt });
+  } catch {
+    // Not in extension context
+  }
 }
 
 /**

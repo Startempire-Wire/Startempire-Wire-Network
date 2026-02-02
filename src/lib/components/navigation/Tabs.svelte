@@ -4,7 +4,9 @@
   import { getWebsiteScreenshot } from '$lib/services/screenshot';
   import { authStore } from '$lib/services';
   import { auth } from '$lib/services';
+  import { getNetworkStats, getNetworkContent } from '$lib/services/network';
   import WirebotTab from '$lib/components/wirebot/WirebotTab.svelte';
+  import LoginForm from '$lib/components/auth/LoginForm.svelte';
 
   const tabs = [
     { id: 'wirebot', label: '🤖 Wirebot', content: 'wirebot-content' },
@@ -12,65 +14,37 @@
     { id: 'settings', label: '⚙️ Settings', content: 'settings-content' },
   ];
 
-  // Network data
-  const networkStats = {
-    totalSites: 42,
-    newSites: 5,
-    businessCategories: [
-      { name: 'Technology', count: 15 },
-      { name: 'Services', count: 12 },
-      { name: 'Retail', count: 8 },
-    ],
-  };
+  // Live network data (fetched from Ring Leader)
+  let networkStats = { totalMembers: 0, tiers: 0, content: 0 };
+  let networkContent = [];
+  let networkLoading = true;
 
-  // Network sites (simplified for example)
-  const networkSites = [
-    {
-      name: 'TechHub IE',
-      category: 'Technology',
-      status: 'active',
-      memberType: 'ExtraWire',
-    },
-    {
-      name: 'Local Services Co',
-      category: 'Services',
-      status: 'active',
-      memberType: 'Wire',
-    },
-    {
-      name: 'StartupBoost',
-      category: 'Technology',
-      status: 'active',
-      memberType: 'FreeWire',
-    },
-  ];
-
-  // User settings
-  const userSettings = {
-    notifications: true,
-    darkMode: true,
-    autoConnect: true,
-    membershipLevel: 'Wire',
-    email: 'user@example.com',
-  };
-
-  // Add after networkSites (line 44)
+  // Screenshot previews
   let networkPreviews = [
-    {
-      name: 'Google',
-      url: 'https://www.google.com',
-      screenshot: null,
-    },
-  ];
-
-  const upcomingMembers = [
-    { name: 'Innovation Labs', category: 'Technology', joinDate: '2024-04-01' },
-    { name: 'Digital Solutions', category: 'Services', joinDate: '2024-04-03' },
-    { name: 'Green Tech Co', category: 'Technology', joinDate: '2024-04-05' },
+    { name: 'Startempire Wire', url: 'https://startempirewire.com', screenshot: null },
   ];
 
   let loading = true;
   let currentPreviewIndex = 0;
+
+  async function loadNetworkData() {
+    networkLoading = true;
+    try {
+      const stats = await getNetworkStats();
+      if (stats.length > 0) {
+        networkStats = {
+          totalMembers: stats.find(s => s.label === 'Members')?.value || 0,
+          tiers: stats.find(s => s.label === 'Tiers')?.value || 0,
+          content: stats.find(s => s.label === 'Content')?.value || 0,
+        };
+      }
+      networkContent = await getNetworkContent('posts', 1);
+    } catch (err) {
+      console.error('Failed to load network data:', err);
+    } finally {
+      networkLoading = false;
+    }
+  }
 
   async function loadScreenshots() {
     loading = true;
@@ -80,7 +54,7 @@
       );
       if (screenshot) {
         networkPreviews[currentPreviewIndex].screenshot = screenshot;
-        networkPreviews = networkPreviews; // Trigger Svelte reactivity
+        networkPreviews = networkPreviews;
       }
     } catch (error) {
       console.error('Failed to load screenshot:', error);
@@ -90,7 +64,9 @@
   }
 
   onMount(() => {
+    auth.initialize();
     loadScreenshots();
+    loadNetworkData();
   });
 
   function nextPreview() {
@@ -101,6 +77,10 @@
     currentPreviewIndex =
       (currentPreviewIndex - 1 + networkPreviews.length) %
       networkPreviews.length;
+  }
+
+  async function handleLogout() {
+    await auth.logout();
   }
 </script>
 
@@ -225,124 +205,131 @@
         </button>
       </div>
 
-      <!-- Network Stats (existing code) -->
+      <!-- Network Stats (live from Ring Leader) -->
       <div class="bg-gray-800 rounded-lg p-4">
         <h3 class="text-sm font-medium text-gray-200 mb-4">NETWORK OVERVIEW</h3>
-        <div class="grid grid-cols-3 gap-4">
-          <div class="bg-gray-700 p-3 rounded-lg">
-            <div class="text-2xl font-bold text-blue-400">
-              {networkStats.totalSites}
-            </div>
-            <div class="text-xs text-gray-300">Total Sites</div>
+        {#if networkLoading}
+          <div class="text-center py-4">
+            <div class="animate-spin inline-block w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full"></div>
           </div>
-          <div class="bg-gray-700 p-3 rounded-lg">
-            <div class="text-2xl font-bold text-green-400">
-              {networkStats.newSites}
+        {:else}
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-gray-700 p-3 rounded-lg text-center">
+              <div class="text-2xl font-bold text-blue-400">{networkStats.totalMembers}</div>
+              <div class="text-xs text-gray-300">Members</div>
             </div>
-            <div class="text-xs text-gray-300">New This Week</div>
-          </div>
-          <div class="bg-gray-700 p-3 rounded-lg">
-            <div class="text-2xl font-bold text-purple-400">
-              {networkStats.businessCategories.length}
+            <div class="bg-gray-700 p-3 rounded-lg text-center">
+              <div class="text-2xl font-bold text-green-400">{networkStats.tiers}</div>
+              <div class="text-xs text-gray-300">Tiers</div>
             </div>
-            <div class="text-xs text-gray-300">Categories</div>
+            <div class="bg-gray-700 p-3 rounded-lg text-center">
+              <div class="text-2xl font-bold text-purple-400">{networkStats.content}</div>
+              <div class="text-xs text-gray-300">Content</div>
+            </div>
           </div>
-        </div>
+        {/if}
       </div>
 
-      <!-- Network Ring (existing code) -->
+      <!-- Network Content Feed (live from Ring Leader) -->
+      {#if networkContent.length > 0}
       <div class="bg-gray-800 rounded-lg p-4">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-sm font-medium text-gray-200">NETWORK RING</h3>
-          <button class="text-xs text-blue-400 hover:text-blue-300"
-            >VIEW ALL</button
-          >
-        </div>
-        <div class="flex flex-wrap gap-2">
-          {#each networkSites as site}
-            <div
-              class="bg-gray-700 p-3 rounded-lg border border-gray-600 flex-1 min-w-[200px]"
-            >
-              <div class="flex justify-between items-start mb-2">
-                <h4 class="text-sm font-medium text-gray-200">{site.name}</h4>
-                <span
-                  class="text-xs px-2 py-1 rounded-full bg-blue-900 text-blue-300"
-                >
-                  {site.memberType}
-                </span>
-              </div>
-              <div class="text-xs text-gray-400">{site.category}</div>
-            </div>
+        <h3 class="text-sm font-medium text-gray-200 mb-3">LATEST FROM THE NETWORK</h3>
+        <div class="space-y-2">
+          {#each networkContent.slice(0, 5) as post}
+            <a href={post.link || '#'} target="_blank" rel="noopener noreferrer"
+               class="block p-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+              <div class="text-sm text-gray-200">{@html post.title?.rendered || post.title || 'Untitled'}</div>
+              {#if post.date}
+                <div class="text-xs text-gray-400 mt-1">
+                  {new Date(post.date).toLocaleDateString()}
+                </div>
+              {/if}
+            </a>
           {/each}
         </div>
       </div>
+      {/if}
     </div>
   </TabsPrimitive.Content>
 
   <TabsPrimitive.Content value="settings" class="p-4">
-    <div class="space-y-6">
-      <!-- Account Settings -->
-      <div class="bg-gray-800 rounded-lg p-4">
-        <h3 class="text-sm font-medium text-gray-200 mb-4">ACCOUNT SETTINGS</h3>
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-200">Membership Level</span>
-            <span class="text-sm text-blue-400"
-              >{userSettings.membershipLevel}</span
-            >
+    <div class="space-y-4">
+      {#if !$authStore.isAuthenticated}
+        <!-- Login Form -->
+        <LoginForm on:login={() => {}} />
+      {:else}
+        <!-- Account Info -->
+        <div class="bg-gray-800 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium text-gray-200">ACCOUNT</h3>
+            <span class="text-xs px-2 py-1 rounded-full bg-blue-900 text-blue-300 uppercase">
+              {$authStore.tier || 'free'}
+            </span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-200">Email</span>
-            <span class="text-sm text-gray-400">{userSettings.email}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Preferences -->
-      <div class="bg-gray-800 rounded-lg p-4">
-        <h3 class="text-sm font-medium text-gray-200 mb-4">PREFERENCES</h3>
-        <div class="space-y-4">
-          {#each Object.entries(userSettings) as [key, value]}
-            {#if typeof value === 'boolean'}
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-200"
-                  >{key.charAt(0).toUpperCase() + key.slice(1)}</span
-                >
-                <button
-                  class="relative inline-flex h-6 w-11 items-center rounded-full
-                             ${value ? 'bg-blue-600' : 'bg-gray-600'}"
-                >
-                  <span
-                    class="translate-x-${value ? '6' : '1'} inline-block h-4 w-4
-                             rounded-full bg-white transition"
-                  ></span>
-                </button>
-              </div>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-400">Name</span>
+              <span class="text-gray-200">{$authStore.user?.display_name || '—'}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Email</span>
+              <span class="text-gray-200">{$authStore.user?.email || '—'}</span>
+            </div>
+            {#if $authStore.scoreboardId}
+            <div class="flex justify-between">
+              <span class="text-gray-400">Scoreboard</span>
+              <a href="https://wins.wirebot.chat/{$authStore.scoreboardId}" 
+                 target="_blank" class="text-blue-400 hover:text-blue-300">
+                View →
+              </a>
+            </div>
             {/if}
-          {/each}
+          </div>
         </div>
-      </div>
 
-      <!-- Data Management -->
-      <div class="bg-gray-800 rounded-lg p-4">
-        <h3 class="text-sm font-medium text-gray-200 mb-4">DATA MANAGEMENT</h3>
+        <!-- Features -->
+        <div class="bg-gray-800 rounded-lg p-4">
+          <h3 class="text-sm font-medium text-gray-200 mb-3">FEATURES</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex justify-between">
+              <span class="text-gray-400">⚡ Wirebot AI</span>
+              <span class={$authStore.features?.wirebot ? 'text-green-400' : 'text-gray-500'}>
+                {$authStore.features?.wirebot ? '✅ Active' : '🔒 Upgrade'}
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">📊 Scoreboard</span>
+              <span class={$authStore.features?.scoreboard ? 'text-green-400' : 'text-gray-500'}>
+                {$authStore.features?.scoreboard ? '✅ Active' : '🔒 Upgrade'}
+              </span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">🔄 Refresh Rate</span>
+              <span class="text-gray-300">
+                {Math.round(($authStore.features?.refreshRate || 3600000) / 60000)}min
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
         <div class="space-y-2">
-          <button
-            class="w-full text-left text-sm text-gray-200 p-2 hover:bg-gray-700 rounded"
-          >
-            Clear Cache
-          </button>
-          <button
-            class="w-full text-left text-sm text-gray-200 p-2 hover:bg-gray-700 rounded"
-          >
-            Export Data
-          </button>
-          <button
-            class="w-full text-left text-sm text-red-400 p-2 hover:bg-gray-700 rounded"
-          >
-            Delete Account
+          <a href="https://startempirewire.com/account/" target="_blank"
+             class="block w-full text-center text-sm text-blue-400 hover:text-blue-300 
+                    py-2 border border-gray-700 rounded-lg">
+            Manage Membership →
+          </a>
+          <button on:click={handleLogout}
+                  class="w-full text-sm text-red-400 hover:text-red-300 
+                         py-2 border border-gray-700 rounded-lg hover:bg-gray-800">
+            Sign Out
           </button>
         </div>
+      {/if}
+
+      <!-- Version -->
+      <div class="text-center text-xs text-gray-600 mt-4">
+        Startempire Wire Network v0.1.0
       </div>
     </div>
   </TabsPrimitive.Content>

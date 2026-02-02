@@ -1,306 +1,325 @@
-import { writable } from 'svelte/store';
-
-// Constants for logging and API endpoints
-const LOG_PREFIX = '[Auth Service]';
-const AUTH_ENDPOINTS = {
-  validate: 'https://startempirewire.com/wp-json/v1/auth/validate',
-  buddybossAuth: 'https://startempirewire.com/wp-json/buddyboss/v1/auth', // BuddyBoss Auth Endpoint
-  openidConnectAuth: 'https://startempirewire.network/openid/auth' // OpenID Connect Auth Endpoint - Example
-};
-
-// Add guilds scope for server verification
-const discordScopes = [
-  'identify',
-  'guilds',
-  'guilds.members.read'
-];
-
-// Constants
-const NETWORK_API = 'https://startempirewire.network/wp-json/sewn/v1';
-const PARENT_API = 'https://startempirewire.com/wp-json/sewn/v1';
+import { writable, get } from 'svelte/store';
 
 /**
- * Global authentication store
- * Manages reactive auth state across the extension
- * @type {import('svelte/store').Writable<AuthState>}
+ * Auth Service — Startempire Wire Network Extension
+ * 
+ * Authentication flow:
+ * 1. User enters WP credentials → POST to startempirewire.com JWT endpoint
+ * 2. WP JWT token received → Exchange with Ring Leader for ecosystem JWT
+ * 3. Ring Leader JWT stored → Used for all sewn/v1 API calls
+ * 4. JWT includes tier info → Controls feature access
+ * 
+ * Architecture:
+ * - startempirewire.com = identity source (MemberPress + WordPress)
+ * - Ring Leader (sewn/v1) = auth relay + content distribution
+ * - Chrome extension stores JWT in chrome.storage.local
  */
+
+const LOG_PREFIX = '[Auth]';
+
+// API endpoints
+const PARENT_SITE = 'https://startempirewire.com';
+const RING_LEADER = 'https://startempirewire.network/wp-json/sewn/v1';
+
+// Tier feature permissions
+const TIER_FEATURES = {
+  free: {
+    level: 0,
+    wirebot: false,
+    scoreboard: false,
+    refreshRate: 3600000, // 1hr
+  },
+  freewire: {
+    level: 1,
+    wirebot: true,
+    scoreboard: false,
+    refreshRate: 1800000, // 30min
+  },
+  wire: {
+    level: 2,
+    wirebot: true,
+    scoreboard: true,
+    refreshRate: 600000, // 10min
+  },
+  extrawire: {
+    level: 3,
+    wirebot: true,
+    scoreboard: true,
+    refreshRate: 300000, // 5min
+  }
+};
+
+/**
+ * @typedef {Object} AuthState
+ * @property {boolean} isAuthenticated
+ * @property {Object|null} user
+ * @property {string|null} tier
+ * @property {string|null} jwt - Ring Leader JWT
+ * @property {string|null} scoreboardId - Member's scoreboard randID
+ * @property {Object} features - Tier-based feature flags
+ * @property {number} expiresAt - JWT expiry timestamp
+ */
+
+/** @type {import('svelte/store').Writable<AuthState>} */
 export const authStore = writable({
   isAuthenticated: false,
   user: null,
-  membershipLevel: null,
-  wpAuthToken: null,
-  membershipFeatures: []
+  tier: null,
+  jwt: null,
+  scoreboardId: null,
+  features: TIER_FEATURES.free,
+  expiresAt: 0,
 });
 
 export class AuthService {
+
   /**
-   * Initialize auth state from storage
-   * Called on extension startup
+   * Initialize auth from stored session
    */
   async initialize() {
-    const logPrefix = `${LOG_PREFIX}[initialize]`;
-    console.log(`${logPrefix} Initializing auth service`);
-
+    console.log(`${LOG_PREFIX} Initializing`);
     try {
-      const stored = await chrome.storage.local.get(['auth']);
-      if (stored.auth) {
-        console.debug(`${logPrefix} Found stored auth data:`, {
-          isAuthenticated: stored.auth.isAuthenticated,
-          membershipLevel: stored.auth.membershipLevel,
-          hasToken: !!stored.auth.wpAuthToken
-        });
-        authStore.set(stored.auth);
-      } else {
-        console.debug(`${logPrefix} No stored auth data found`);
-      }
-    } catch (error) {
-      console.error(`${logPrefix} Failed to initialize:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Authenticate user with WordPress OAuth
-   * Handles token acquisition and validation
-   */
-  async login() {
-    const logPrefix = `${LOG_PREFIX}[login]`;
-    console.log(`${logPrefix} Starting login flow`);
-
-    try {
-      // Get WordPress OAuth token
-      console.debug(`${logPrefix} Requesting OAuth token`);
-      const token = await chrome.identity.getAuthToken({
-        interactive: true,
-        scopes: ['https://startempirewire.com/wp-json/']
-      });
-
-      console.debug(`${logPrefix} Token received, validating with WordPress`);
-      // Validate with WordPress
-      const response = await fetch(AUTH_ENDPOINTS.validate, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const stored = await chrome.storage.local.get(['sewn_auth']);
+      if (stored.sewn_auth) {
+        const auth = stored.sewn_auth;
+        
+        // Check if JWT expired
+        if (auth.expiresAt && auth.expiresAt < Date.now()) {
+          console.log(`${LOG_PREFIX} Stored JWT expired, clearing`);
+          await this.logout();
+          return;
         }
-      });
 
-      if (!response.ok) {
-        console.error(`${logPrefix} Validation failed:`, response.status);
-        throw new Error(`Auth validation failed: ${response.status}`);
+        // Validate token is still good
+        const valid = await this._validateToken(auth.jwt);
+        if (valid) {
+          const tier = (auth.tier || 'free').toLowerCase();
+          auth.features = TIER_FEATURES[tier] || TIER_FEATURES.free;
+          authStore.set(auth);
+          console.log(`${LOG_PREFIX} Restored session: ${auth.user?.display_name} (${tier})`);
+        } else {
+          console.log(`${LOG_PREFIX} Stored JWT invalid, clearing`);
+          await this.logout();
+        }
       }
-
-      const userData = await response.json();
-      console.debug(`${logPrefix} User data received:`, {
-        userId: userData.user?.id,
-        membershipLevel: userData.membership_level
-      });
-
-      // Store auth data
-      const authData = {
-        isAuthenticated: true,
-        user: userData.user,
-        membershipLevel: userData.membership_level,
-        wpAuthToken: token
-      };
-
-      console.debug(`${logPrefix} Storing auth data`);
-      await chrome.storage.local.set({ auth: authData });
-      authStore.set(authData);
-
-      console.log(`${logPrefix} Login completed successfully`);
-      return authData;
-
-    } catch (error) {
-      console.error(`${logPrefix} Login failed:`, error);
-      console.error(`${logPrefix} Error stack:`, error.stack);
-      throw error;
+    } catch (err) {
+      console.error(`${LOG_PREFIX} Init error:`, err);
     }
   }
 
   /**
-   * Clear authentication state
-   * Removes stored tokens and resets auth store
+   * Login with WordPress credentials
+   * @param {string} username 
+   * @param {string} password 
+   * @returns {Promise<AuthState>}
    */
-  async logout() {
-    const logPrefix = `${LOG_PREFIX}[logout]`;
-    console.log(`${logPrefix} Processing logout`);
+  async login(username, password) {
+    console.log(`${LOG_PREFIX} Login attempt for: ${username}`);
 
+    // Step 1: Get WordPress JWT token
+    // Using WP REST API application passwords or JWT plugin
+    let wpToken;
     try {
-      console.debug(`${logPrefix} Clearing stored auth data`);
-      await chrome.storage.local.remove(['auth']);
-
-      console.debug(`${logPrefix} Resetting auth store`);
-      authStore.set({
-        isAuthenticated: false,
-        user: null,
-        membershipLevel: null,
-        wpAuthToken: null
+      // Try JWT Authentication plugin endpoint first
+      const wpResp = await fetch(`${PARENT_SITE}/wp-json/jwt-auth/v1/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
       });
 
-      console.log(`${logPrefix} Logout completed successfully`);
-    } catch (error) {
-      console.error(`${logPrefix} Logout failed:`, error);
-      console.error(`${logPrefix} Error stack:`, error.stack);
-      throw error;
-    }
-  }
-
-  async verifyMembership(token) {
-    const response = await fetch('https://startempirewire.com/wp-json/memberpress/v1/membership', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (!response.ok) throw new Error('Invalid membership');
-    return response.json().tier; // Returns 'freeWire', 'wire', etc
-  }
-}
-
-// Create and export singleton instance
-export const auth = new AuthService();
-
-/**
- * Authenticate with BuddyBoss using username and password
- * @param {string} username
- * @param {string} password
- * @returns {Promise<AuthResponse>}
- */
-export async function authenticateWithBuddyBoss(username, password) {
-  const authPrefix = `${LOG_PREFIX} [BuddyBoss Auth]`;
-  console.log(`${authPrefix} Attempting BuddyBoss authentication for user:`, username);
-
-  try {
-    const response = await fetch(AUTH_ENDPOINTS.buddybossAuth, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ username, password })
-    });
-
-    if (!response.ok) {
-      const message = `BuddyBoss authentication failed: ${response.status} ${response.statusText}`;
-      console.warn(`${authPrefix} ${message}`);
-      throw new Error(message);
+      if (wpResp.ok) {
+        const wpData = await wpResp.json();
+        wpToken = wpData.token;
+      } else {
+        // Fallback: Use WP application password (Basic Auth)
+        wpToken = btoa(`${username}:${password}`);
+      }
+    } catch (err) {
+      // Fallback: Basic Auth encoding
+      wpToken = btoa(`${username}:${password}`);
     }
 
-    const authData = await response.json();
-    console.debug(`${authPrefix} BuddyBoss authentication successful`, authData);
-    return authData; // Adjust based on actual BuddyBoss auth response structure
+    if (!wpToken) {
+      throw new Error('Failed to get WordPress token');
+    }
 
-  } catch (error) {
-    console.error(`${authPrefix} BuddyBoss authentication error:`, error);
-    throw error;
-  }
-}
-
-/**
- * Authenticate with OpenID Connect
- * This is a simplified example - actual OIDC flow is more complex (redirects, etc.)
- * @param {string} openIdToken -  OpenID Connect token obtained from provider
- * @returns {Promise<AuthResponse>}
- */
-export async function authenticateWithOpenIdConnect(openIdToken) {
-  const authPrefix = `${LOG_PREFIX} [OpenID Connect Auth]`;
-  console.log(`${authPrefix} Attempting OpenID Connect authentication`);
-
-  try {
-    const response = await fetch(AUTH_ENDPOINTS.openidConnectAuth, {
+    // Step 2: Exchange with Ring Leader for ecosystem JWT
+    const rlResp = await fetch(`${RING_LEADER}/auth/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openIdToken}` // Or however OIDC backend expects token
-      }
+        'Authorization': `Bearer ${wpToken}`,
+      },
     });
 
-    if (!response.ok) {
-      const message = `OpenID Connect authentication failed: ${response.status} ${response.statusText}`;
-      console.warn(`${authPrefix} ${message}`);
-      throw new Error(message);
+    if (!rlResp.ok) {
+      // Try direct validation if token exchange fails
+      const valResp = await fetch(`${RING_LEADER}/auth/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${wpToken}`,
+        },
+      });
+
+      if (!valResp.ok) {
+        const err = await valResp.json().catch(() => ({}));
+        throw new Error(err.error || `Authentication failed (${valResp.status})`);
+      }
+
+      const valData = await valResp.json();
+      if (!valData.valid) {
+        throw new Error('Invalid credentials');
+      }
+
+      // Use validation data directly
+      return this._setAuth({
+        jwt: wpToken,
+        user: valData.user,
+        tier: valData.user?.tier || 'free',
+        expiresAt: Date.now() + 86400000, // 24hr
+      });
     }
 
-    const authData = await response.json();
-    console.debug(`${authPrefix} OpenID Connect authentication successful`, authData);
-    return authData; // Adjust based on actual OIDC auth response structure
+    const rlData = await rlResp.json();
 
-  } catch (error) {
-    console.error(`${authPrefix} OpenID Connect authentication error:`, error);
-    throw error;
+    // Step 3: Get member details including scoreboard
+    let scoreboardId = null;
+    try {
+      const memberResp = await fetch(`${RING_LEADER}/member/scoreboard`, {
+        headers: { 'Authorization': `Bearer ${rlData.token}` },
+      });
+      if (memberResp.ok) {
+        const memberData = await memberResp.json();
+        scoreboardId = memberData.scoreboard_id || null;
+      }
+    } catch (e) {
+      console.warn(`${LOG_PREFIX} Could not fetch scoreboard info:`, e);
+    }
+
+    // Step 4: Store and set auth
+    return this._setAuth({
+      jwt: rlData.token,
+      user: rlData.user || { display_name: username },
+      tier: rlData.tier || 'free',
+      scoreboardId,
+      expiresAt: Date.now() + (rlData.expires_in || 86400) * 1000,
+    });
+  }
+
+  /**
+   * Login via WordPress cookie (for users already logged into the site)
+   * Uses the Connect plugin's auth exchange endpoint
+   */
+  async loginViaCookie() {
+    console.log(`${LOG_PREFIX} Attempting cookie-based login`);
+    
+    try {
+      // Get WP nonce from the parent site
+      const nonceResp = await fetch(`${PARENT_SITE}/wp-json/sewn-connect/v1/auth/exchange`, {
+        method: 'POST',
+        credentials: 'include', // Send cookies
+      });
+
+      if (!nonceResp.ok) {
+        return null; // Not logged in on the site
+      }
+
+      const data = await nonceResp.json();
+      if (data.jwt) {
+        return this._setAuth({
+          jwt: data.jwt,
+          user: data.user,
+          tier: data.tier || 'free',
+          scoreboardId: null,
+          expiresAt: Date.now() + 86400000,
+        });
+      }
+    } catch (err) {
+      console.warn(`${LOG_PREFIX} Cookie login failed:`, err);
+    }
+    return null;
+  }
+
+  /**
+   * Logout — clear all stored auth
+   */
+  async logout() {
+    console.log(`${LOG_PREFIX} Logging out`);
+    await chrome.storage.local.remove(['sewn_auth', 'sewn_jwt']);
+    authStore.set({
+      isAuthenticated: false,
+      user: null,
+      tier: null,
+      jwt: null,
+      scoreboardId: null,
+      features: TIER_FEATURES.free,
+      expiresAt: 0,
+    });
+  }
+
+  /**
+   * Get current JWT for API calls
+   */
+  async getToken() {
+    const state = get(authStore);
+    if (!state.jwt || (state.expiresAt && state.expiresAt < Date.now())) {
+      return null;
+    }
+    return state.jwt;
+  }
+
+  /**
+   * Check if user has access to a feature
+   * @param {string} feature - Feature name (wirebot, scoreboard)
+   */
+  hasFeature(feature) {
+    const state = get(authStore);
+    return state.features?.[feature] || false;
+  }
+
+  /**
+   * Get tier level (0-3)
+   */
+  getTierLevel() {
+    const state = get(authStore);
+    return state.features?.level || 0;
+  }
+
+  // ─── Private ──────────────────────────────────────────────
+
+  async _validateToken(jwt) {
+    if (!jwt) return false;
+    try {
+      const resp = await fetch(`${RING_LEADER}/auth/validate`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${jwt}` },
+      });
+      const data = await resp.json();
+      return data.valid === true;
+    } catch {
+      return false;
+    }
+  }
+
+  async _setAuth({ jwt, user, tier, scoreboardId, expiresAt }) {
+    const tierKey = (tier || 'free').toLowerCase();
+    const auth = {
+      isAuthenticated: true,
+      user,
+      tier: tierKey,
+      jwt,
+      scoreboardId,
+      features: TIER_FEATURES[tierKey] || TIER_FEATURES.free,
+      expiresAt,
+    };
+
+    await chrome.storage.local.set({ sewn_auth: auth, sewn_jwt: jwt });
+    authStore.set(auth);
+    console.log(`${LOG_PREFIX} Authenticated: ${user?.display_name} (${tierKey})`);
+    return auth;
   }
 }
 
-// Example - needs adaptation for WordPress specifics and error handling
-const WORDPRESS_AUTH_ENDPOINT = 'YOUR_WORDPRESS_AUTH_ENDPOINT'; // Replace with actual endpoint
-
-export async function authenticateWithWordPress() {
-  return new Promise((resolve, reject) => {
-    chrome.identity.launchWebAuthFlow({
-      url: WORDPRESS_AUTH_ENDPOINT, // Construct full auth URL with client_id, redirect_uri, etc.
-      interactive: true // Or false for non-interactive login if appropriate
-    }, async function (redirect_url) {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      // Extract authorization code from redirect_url
-      const authorizationCode = extractCodeFromRedirectURL(redirect_url);
-      if (!authorizationCode) {
-        reject(new Error("Authorization code not found."));
-        return;
-      }
-
-      // Exchange authorization code for access token (Backend API call to WordPress)
-      const tokenResponse = await fetchTokenFromCode(authorizationCode); // Implement fetchTokenFromCode
-      if (!tokenResponse.accessToken) {
-        reject(new Error("Failed to retrieve access token."));
-        return;
-      }
-
-      // Store access token
-      await chrome.storage.local.set({ 'wordpressAccessToken': tokenResponse.accessToken });
-      resolve(tokenResponse.accessToken);
-    });
-  });
-}
-
-export async function getWordPressAccessToken() {
-  const result = await chrome.storage.local.get('wordpressAccessToken');
-  return result.wordpressAccessToken;
-}
-
-// ... Implement fetchTokenFromCode, extractCodeFromRedirectURL, token refresh logic, etc. ... 
-
-export async function wordpressOAuthFlow() {
-  const redirectURL = chrome.identity.getRedirectURL();
-  const authURL = new URL('https://startempirewire.com/oauth/authorize');
-
-  authURL.searchParams.append('response_type', 'code');
-  authURL.searchParams.append('client_id', WORDPRESS_CLIENT_ID);
-  authURL.searchParams.append('redirect_uri', redirectURL);
-  authURL.searchParams.append('scope', 'openid profile network');
-
-  try {
-    const { code } = await chrome.identity.launchWebAuthFlow({
-      url: authURL.toString(),
-      interactive: true
-    });
-
-    const tokenResponse = await fetch('https://startempirewire.com/oauth/token', {
-      method: 'POST',
-      body: new URLSearchParams({
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: redirectURL
-      })
-    });
-
-    const { access_token } = await tokenResponse.json();
-    authStore.update($auth => ({ ...$auth, wpAuthToken: access_token }));
-
-  } catch (error) {
-    console.error('OAuth Flow Failed:', error);
-  }
-}
-
-export async function refreshMemberPressRoles() {
-  const response = await fetch('https://startempirewire.com/wp-json/mp/v1/roles');
-  chrome.storage.local.set({ memberpressRoles: await response.json() });
-} 
+// Singleton
+export const auth = new AuthService();

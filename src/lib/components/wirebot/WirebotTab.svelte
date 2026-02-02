@@ -7,7 +7,7 @@
    * Fetches live data from Ring Leader (sewn/v1) + Scoreboard API.
    */
   import { onMount } from 'svelte';
-  import { authStore } from '$lib/services';
+  import { authStore } from '../../../services/auth';
   import wirebotApi from '$lib/services/wirebot-api';
 
   let loading = true;
