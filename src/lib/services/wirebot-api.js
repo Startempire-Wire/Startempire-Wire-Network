@@ -100,6 +100,9 @@ export async function getNetworkStats() {
 
 /**
  * Get current user's scoreboard data
+ * 
+ * Flow: Ring Leader JWT → /member/scoreboard → scoreboard URL → live data
+ * The scoreboard accepts Ring Leader JWT for auth (HMAC-verified).
  */
 export async function getScoreboard() {
   const token = await getToken();
@@ -115,9 +118,14 @@ export async function getScoreboard() {
     return { provisioned: false };
   }
 
-  // Fetch actual scoreboard data
+  // Fetch actual scoreboard data — pass Ring Leader JWT for auth
   try {
-    const sbResp = await fetch(`${data.scoreboard_url}/v1/scoreboard?mode=dashboard`);
+    const sbResp = await fetch(`${data.scoreboard_url}/v1/scoreboard?mode=dashboard`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!sbResp.ok) {
+      return { provisioned: true, url: data.scoreboard_url, id: data.scoreboard_id };
+    }
     const sbData = await sbResp.json();
     return {
       provisioned: true,
@@ -150,16 +158,62 @@ export async function getChecklist() {
 
 /**
  * Send message to Wirebot AI
+ * 
+ * Uses the scoreboard's /v1/chat proxy which handles:
+ * - Session persistence (auto-creates/resumes sessions)
+ * - Pairing protocol injection
+ * - Live scoreboard context injection
+ * - Forwarding to OpenClaw gateway
+ * 
+ * Falls back to direct gateway if scoreboard unavailable.
  */
-export async function askWirebot(message) {
+export async function askWirebot(message, { scoreboardUrl = null, sessionId = null } = {}) {
   const token = await getToken();
   
+  // Prefer scoreboard chat proxy (has context injection)
+  const chatUrl = scoreboardUrl 
+    ? `${scoreboardUrl}/v1/chat` 
+    : 'https://wins.wirebot.chat/v1/chat';
+  
+  try {
+    const body = {
+      message,
+      stream: false,
+    };
+    if (sessionId) body.session_id = sessionId;
+
+    const resp = await fetch(chatUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(body)
+    });
+    
+    if (!resp.ok) {
+      // Fallback to direct gateway
+      return askWirebotDirect(message, token);
+    }
+    
+    const data = await resp.json();
+    return { 
+      content: data.choices?.[0]?.message?.content || data.content || 'No response',
+      sessionId: data.session_id || sessionId
+    };
+  } catch (err) {
+    // Fallback to direct gateway
+    return askWirebotDirect(message, token);
+  }
+}
+
+async function askWirebotDirect(message, token) {
   try {
     const resp = await fetch(`${WIREBOT_API}/v1/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { 'X-SEWN-Token': token } : {})
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       },
       body: JSON.stringify({
         model: 'wirebot',
@@ -167,13 +221,10 @@ export async function askWirebot(message) {
       })
     });
     
-    if (!resp.ok) {
-      return { error: `Wirebot unavailable (${resp.status})` };
-    }
+    if (!resp.ok) return { error: `Wirebot unavailable (${resp.status})` };
     
     const data = await resp.json();
-    const content = data.choices?.[0]?.message?.content || 'No response';
-    return { content };
+    return { content: data.choices?.[0]?.message?.content || 'No response' };
   } catch (err) {
     return { error: `Connection failed: ${err.message}` };
   }

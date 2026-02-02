@@ -16,6 +16,9 @@
   let askInput = '';
   let chatResponse = '';
   let chatLoading = false;
+  let chatSessionId = null;
+  let scoreboardUrl = null;
+  let error = null;
 
   // Scoreboard data
   let scoreData = {
@@ -54,12 +57,36 @@
       // Get scoreboard
       const sb = await wirebotApi.getScoreboard();
       if (sb && sb.provisioned !== false) {
+        scoreboardUrl = sb.url || null;
         const merged = sb.scoreboard || sb;
-        scoreData = { ...scoreData, ...merged };
-        if (sb.feed) scoreData.feed = sb.feed;
+        
+        // Map scoreboard response to our format
+        if (merged.score) {
+          const s = merged.score;
+          scoreData = {
+            score: s.execution_score || 0,
+            signal: s.execution_score >= 60 ? 'green' : s.execution_score >= 30 ? 'yellow' : 'red',
+            ship_today: s.ships_count || 0,
+            streak: merged.streak || { current: 0 },
+            record: merged.season?.record || '0W-0L',
+            season: merged.season || { name: 'Season 1', days_elapsed: 0 },
+            intent: s.intent || '',
+            lanes: {
+              shipping: s.shipping_score || 0,
+              distribution: s.distribution_score || 0,
+              revenue: s.revenue_score || 0,
+              systems: s.systems_score || 0
+            },
+            feed: merged.feed || sb.feed || []
+          };
+        } else {
+          scoreData = { ...scoreData, ...merged };
+          if (sb.feed) scoreData.feed = sb.feed;
+        }
       }
     } catch (err) {
       console.error('WirebotTab load error:', err);
+      error = err.message;
     } finally {
       loading = false;
     }
@@ -70,8 +97,13 @@
     chatLoading = true;
     chatResponse = '';
     
-    const result = await wirebotApi.askWirebot(askInput);
+    const result = await wirebotApi.askWirebot(askInput, { 
+      scoreboardUrl, 
+      sessionId: chatSessionId 
+    });
     chatResponse = result.content || result.error || 'No response';
+    if (result.sessionId) chatSessionId = result.sessionId;
+    askInput = '';
     chatLoading = false;
   }
 
