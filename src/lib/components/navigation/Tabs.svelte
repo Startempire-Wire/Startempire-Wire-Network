@@ -4,29 +4,12 @@
   import { getWebsiteScreenshot } from '$lib/services/screenshot';
   import { authStore } from '$lib/services';
   import { auth } from '$lib/services';
+  import WirebotTab from '$lib/components/wirebot/WirebotTab.svelte';
 
   const tabs = [
     { id: 'wirebot', label: '🤖 Wirebot', content: 'wirebot-content' },
     { id: 'network', label: '🌐 Network', content: 'network-content' },
     { id: 'settings', label: '⚙️ Settings', content: 'settings-content' },
-  ];
-
-  const businessSetupProgress = {
-    total: 20,
-    completed: 3,
-    nextTask: 'Create Mission Statement',
-  };
-
-  const networkPartners = [
-    { id: 'idea', label: 'Idea', icon: '💡' },
-    { id: 'launch', label: 'Launch', icon: '🚀' },
-    { id: 'growth', label: 'Growth', icon: '📈' },
-  ];
-
-  const dailyTasks = [
-    { id: 1, task: 'Create Mission Statement', status: 'pending' },
-    { id: 2, task: 'Create Mission Statement', status: 'pending' },
-    { id: 3, task: 'Create Mission Statement', status: 'pending' },
   ];
 
   // Network data
@@ -136,146 +119,7 @@
   </TabsPrimitive.List>
 
   <TabsPrimitive.Content value="wirebot" class="p-4">
-    <div class="space-y-4">
-      <h2 class="text-lg font-semibold text-gray-200">Welcome, Verious!</h2>
-
-      <!-- Business Setup Tasks -->
-      <div class="bg-gray-800 rounded-lg p-4">
-        <div class="flex justify-between items-center mb-3">
-          <div class="flex items-center gap-2">
-            <h3 class="font-medium text-sm text-gray-200">
-              BUSINESS SETUP TASKS - 15%
-            </h3>
-            <button class="text-gray-400 hover:text-gray-200">
-              <span>ℹ️</span>
-            </button>
-          </div>
-          <span
-            class="text-xs bg-gray-700 px-2 py-1 rounded-full text-gray-200"
-          >
-            20 TASKS COMPLETED
-          </span>
-        </div>
-
-        <div class="w-full bg-gray-700 rounded-full h-1.5 mb-4">
-          <div class="bg-blue-500 h-1.5 rounded-full" style="width: 15%"></div>
-        </div>
-
-        <div class="text-sm text-gray-200">
-          <div class="font-medium mb-2">
-            NEXT TASK: Create Mission Statement
-          </div>
-          <div class="flex items-center gap-2">
-            <button
-              class="text-xs px-3 py-1 bg-blue-600 text-blue-100 rounded-full hover:bg-blue-700"
-            >
-              START
-            </button>
-            <span class="text-xs text-gray-400">Est. 5 min</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Finish Onboarding -->
-      <div class="flex gap-4">
-        {#each Array(3) as _, i}
-          <div class="flex-1 p-3 bg-gray-800 rounded-lg border border-gray-700">
-            <h4 class="text-xs font-medium text-gray-200">
-              Business Onboarding {i + 1}
-            </h4>
-          </div>
-        {/each}
-      </div>
-
-      <!-- Network Growth Partners -->
-      <div class="space-y-2">
-        <div class="flex justify-between items-center">
-          <h3 class="text-xs font-medium text-gray-200">
-            NETWORK GROWTH PARTNERS
-          </h3>
-          <button class="text-xs text-blue-400 hover:text-blue-300"
-            >CONNECT ℹ️</button
-          >
-        </div>
-        <div class="flex justify-between gap-2">
-          {#each networkPartners as partner}
-            <button
-              class="flex-1 py-2 px-3 bg-gray-800 rounded-lg border border-gray-700
-                         text-sm font-medium text-gray-200 hover:bg-gray-700"
-            >
-              {partner.icon}
-              {partner.label}
-            </button>
-          {/each}
-        </div>
-      </div>
-
-      <!-- Daily Stand Up Tasks -->
-      <div class="space-y-2">
-        <h3 class="text-xs font-medium text-gray-200">DAILY STAND UP TASKS</h3>
-        <div class="space-y-2">
-          {#each dailyTasks as task}
-            <div
-              class="flex items-center justify-between p-3 bg-gray-800 rounded-lg
-                      border border-gray-700"
-            >
-              <div class="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  class="rounded border-gray-600 bg-gray-700 text-blue-500"
-                />
-                <span class="text-sm text-gray-200">{task.task}</span>
-              </div>
-              <div class="flex gap-2">
-                <button class="text-gray-400 hover:text-gray-200">⚙️</button>
-                <button class="text-gray-400 hover:text-gray-200">📝</button>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-
-      <!-- Business Setup Tasks (Additional Section) -->
-      <div class="space-y-2">
-        <h3 class="text-xs font-medium text-gray-200">BUSINESS SETUP TASKS</h3>
-        <div class="space-y-2">
-          {#each dailyTasks as task}
-            <div
-              class="flex items-center justify-between p-3 bg-gray-800 rounded-lg
-                      border border-gray-700"
-            >
-              <div class="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  class="rounded border-gray-600 bg-gray-700 text-blue-500"
-                />
-                <span class="text-sm text-gray-200">{task.task}</span>
-              </div>
-              <div class="flex gap-2">
-                <button class="text-gray-400 hover:text-gray-200">⚙️</button>
-                <button class="text-gray-400 hover:text-gray-200">📝</button>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-
-      <!-- Ask Wire Bot -->
-      <div class="mt-6">
-        <div class="relative">
-          <input
-            type="text"
-            placeholder="Ask Wire Bot A Question..."
-            class="w-full pl-4 pr-12 py-2.5 bg-gray-800 border border-gray-700
-                   rounded-lg text-sm text-gray-200 placeholder-gray-500"
-          />
-          <div class="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
-            <button class="text-gray-400 hover:text-gray-200">➡️</button>
-            <button class="text-gray-400 hover:text-gray-200">📧</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <WirebotTab />
   </TabsPrimitive.Content>
 
   <TabsPrimitive.Content value="network" class="p-4">
