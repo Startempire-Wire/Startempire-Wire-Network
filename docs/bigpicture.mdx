@@ -143,12 +143,90 @@ Chrome Extension - Startempire Wire Network Chrome Extension
 - - Network Statistics: Total Sites in Network
 - Allows for users to navigate the Startempire Wire Network & Content (Modern Web Ring)
 
+## Wirebot — AI Business Operating Partner
+
+Wirebot is the private AI operating partner embedded across the Startempire Wire ecosystem. It is NOT a chat app — it's a business operating dashboard where AI is woven into the workflow.
+
+### Core Identity
+- **What**: AI concierge + accountability engine for founders/operators
+- **Where**: Chrome Extension (first tab), helm.wirebot.chat (gateway), wins.wirebot.chat (scoreboard)
+- **How**: OpenClaw gateway with memory bridge (Mem0 + Letta + memory-core)
+- **Who**: Every Startempire Wire member gets Wirebot scaled to their tier
+
+### Architecture
+- **Gateway**: OpenClaw v2026.1.30 at `helm.wirebot.chat` (CF tunnel → port 18789)
+- **Memory**: 3-layer cascade — memory-core (workspace), Mem0 (conversation facts), Letta (structured state)
+- **Tools**: 5 registered tools — `wirebot_recall`, `wirebot_remember`, `wirebot_business_state`, `wirebot_checklist`, `wirebot_score`
+- **Models**: Primary `claude-sonnet-4`, fallback `claude-haiku-4` via OpenRouter
+
+### 12 Operating Pillars (priority-tiered)
+**Tier 1** (highest): Calm · Rigor · Diplomatic Truth
+**Tier 2**: Deep Clarity · Protect What's Built · Sequencing & Timing
+**Tier 3**: Maximum Leverage · Resourceful & Proactive · Persistent
+**Tier 4**: Operator Sustainability · Learn From Everything · Communication as Strategy
+
+### Membership Integration
+| Tier | Wirebot Access |
+|------|---------------|
+| Free (Non-Verified) | None |
+| FreeWire | Basic Wirebot in Chrome Extension |
+| Wire | Full Wirebot + Scoreboard + Checklist |
+| ExtraWire | Priority Wirebot + Premium features |
+
+### Onboarding Flow
+1. Member subscribes via startempirewire.com (MemberPress)
+2. Ring Leader receives webhook → provisions scoreboard (wins.wirebot.chat/{randID})
+3. Chrome Extension authenticates via Ring Leader JWT
+4. Wirebot tab loads scoreboard + checklist + AI chat
+5. Pairing protocol begins (22 questions across 4 phases)
+
+## Business Performance Scoreboard — wins.wirebot.chat
+
+The Scoreboard is BOTH Wirebot's internal engine AND a standalone visual product. API-first so any bot or business can plug in.
+
+### Architecture
+- **Server**: Go binary + SQLite (WAL mode), embedded Svelte PWA
+- **URL**: `wins.wirebot.chat` (CF tunnel → port 8100)
+- **Multi-tenant**: Each member gets `wins.wirebot.chat/{randID}` with isolated SQLite DB
+- **Provisioning**: Ring Leader webhook → POST /v1/tenants → DB created automatically
+
+### Scoring Model
+- **Execution Score (0-100)**: Shipping 40%, Distribution 25%, Revenue 20%, Systems 15%
+- **Signal colors**: 🟢 Green (70+), 🟡 Yellow (40-69), 🔴 Red (<40)
+- **Season model**: 90-day cycles. Season 1: "Red-to-Black" (Feb 1 → May 1, 2026)
+- **Verification levels**: STRONG (GitHub/Stripe webhooks), MEDIUM (RSS/YouTube), WEAK (AI-reported), SELF_REPORTED (CLI)
+- **Gated events**: AI-submitted events are `pending` until operator approves
+
+### Connected Integrations
+- GitHub webhooks: Push, PR merge, release, workflow run → SHIPPING lane (STRONG verification)
+- Stripe webhooks: Charge succeeded, invoice paid → REVENUE lane (STRONG verification)
+- RSS poller: Blog post published → DISTRIBUTION lane (MEDIUM verification)
+- YouTube poller: Video published → DISTRIBUTION lane (MEDIUM verification)
+- WB CLI: Manual ship/complete commands → SHIPPING lane (SELF_REPORTED)
+- Wirebot: Tool-submitted events → pending approval
+
+### API Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /v1/scoreboard | GET | Dashboard view (score, lanes, season) |
+| /v1/events | POST/GET | Submit or query events |
+| /v1/feed | GET | Activity feed with icons and deltas |
+| /v1/season | GET | Season record, calendar, stats |
+| /v1/intent | POST/GET | Daily intent statement |
+| /v1/tenants | POST/GET | Provision or list tenants |
+| /v1/webhooks/github | POST | GitHub event receiver |
+| /v1/webhooks/stripe | POST | Stripe event receiver |
+| /{randID}/v1/... | * | Tenant-scoped API |
+
 ### Authentication Flow:
 Request → Authentication Check:
   ├─ WordPress Admin? → Allow All Access
   ├─ Valid API Key? → Apply API Tier Limits
-  └─ Ring Leader Token? → Trust Ring Leader's Tier Assignment
+  ├─ Ring Leader JWT? → Trust Ring Leader's Tier Assignment
   └─ No Auth → Apply Free (Non-Verified - Public Access) Tier Limits
+
+### Ring Leader Auth Relay:
+Extension/Connect → Ring Leader (sewn/v1/auth/token) → Parent Site (MemberPress) → JWT issued → Ecosystem-wide auth
 
 # Operational Patterns & Integration Guide
 
