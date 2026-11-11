@@ -37,4 +37,14 @@ For every claim label evidence as **spec**, **source**, **deployment observation
 A future ChatGPT session can open this PR, inspect all four audit documents, independently trace evidence, and decide where Wirebot should attach without requesting the conversation transcript. Do not deploy, restart, modify production, run state-changing tests, or merge this PR as part of reconnaissance.
 
 ## Wirebot findings / return handoff
-_Pending Wirebot update. Replace this section with summary, evidence links, commit SHA, blockers and READY FOR ARCHITECTURE REVIEW when completed._
+**Status: PARTIAL AUDIT — NOT READY FOR ARCHITECTURE REVIEW.**
+
+Four bounded evidence reports are committed on this same branch:
+- [Topology](../audits/2026-11-10-network-deployment-topology.md)
+- [API matrix](../audits/2026-11-10-network-api-matrix.md)
+- [Gaps and source citations](../audits/2026-11-10-network-gaps.md)
+- [Agent integration map](../audits/2026-11-10-agent-integration-map.md)
+
+Wirebot directly collected two-site deployment inventory and 18 anonymous HTTP observations plus two rechecks. A source-research sub-agent supplied bounded immutable source citations. Parent directory returned 502 twice; Connect health timed out then returned 503. Three installed network component HEADs differ from reviewed source. Node syntax check passed; PHP regression not executed because local PHP CLI is absent. No production mutation or merge.
+
+Original obligations remain open: full deployed route callback/auth/consumer/persistence mapping, member-site enumeration, complete safe member-journey evidence and independent citation validation. Authenticated receiver delivery is not proven. Documents preserve these unknowns rather than imply readiness. Review questions: exact federation scopes, cross-site identity mapping, selective sharing and entitlement freshness. No architecture deployment authorized. This commit's exact SHA is recorded in the PR description/comment after remote content readback.
